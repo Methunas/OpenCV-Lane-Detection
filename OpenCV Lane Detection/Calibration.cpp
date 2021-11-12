@@ -2,11 +2,8 @@
 
 CalibrationData Calibrate(vector<Mat> images, Size boardSize, float squareSize)
 {
-	Mat matrix;
-	Mat distortion;
+	CalibrationData calibrationData;
 	vector<Point2f> corners;
-	vector<vector<Point3f>> objectPoints;
-	vector<vector<Point2f>> imagePoints;
 
 	for (Mat image : images)
 	{
@@ -20,7 +17,8 @@ CalibrationData Calibrate(vector<Mat> images, Size boardSize, float squareSize)
 			cornerSubPix(gray, corners, Size(5, 5), Size(-1, -1),
 				TermCriteria(TermCriteria::EPS | TermCriteria::COUNT, 30, 0.1));
 
-			drawChessboardCorners(gray, boardSize, corners, hasCorners);
+			//drawChessboardCorners(gray, boardSize, corners, hasCorners);
+			//imshow("Corners", gray);
 		}
 
 		vector<Point3f> object;
@@ -31,16 +29,33 @@ CalibrationData Calibrate(vector<Mat> images, Size boardSize, float squareSize)
 
 		if (hasCorners)
 		{
-			imagePoints.push_back(corners);
-			objectPoints.push_back(object);
+			calibrationData.imagePoints.push_back(corners);
+			calibrationData.objectPoints.push_back(object);
 		}
 	}
 
-	Mat camMatrix, distortion;
-	vector<Mat> rvecs, tvecs;
+	calibrateCamera(calibrationData.objectPoints, calibrationData.imagePoints, images[0].size(), calibrationData.camMatrix, 
+		calibrationData.distortion, calibrationData.rotationVecs, calibrationData.transformationVecs);
 
-	calibrateCamera(objectPoints, imagePoints, images[0].size(),
-		camMatrix, distortion, rvecs, tvecs);
+	return calibrationData;
+}
 
-	return CalibrationData(camMatrix, distortion);
+double GetCalibrationError(CalibrationData calibrationData)
+{
+	int totalPoints = 0;
+	double totalError = 0;
+
+	for (int i = 0; i < calibrationData.objectPoints.size(); i++)
+	{
+		vector<Point2f> imagePoints;
+
+		projectPoints(Mat(calibrationData.objectPoints[i]), calibrationData.rotationVecs[i], 
+			calibrationData.transformationVecs[i], calibrationData.camMatrix, calibrationData.distortion, imagePoints);
+
+		double error = norm(Mat(calibrationData.imagePoints[i]), Mat(imagePoints), NORM_L2);
+		totalError += error * error;
+		totalPoints += calibrationData.objectPoints[i].size();
+	}
+	
+	return sqrt(totalError / totalPoints);
 }
