@@ -7,6 +7,14 @@
 using namespace std;
 using namespace cv;
 
+typedef struct CalibrationData
+{
+	Mat camMatrix, distortion;
+
+	CalibrationData() = default;
+	CalibrationData(Mat camMatrix, Mat distortion) : camMatrix(camMatrix), distortion(distortion) {}
+};
+
 class Calibration
 {
 private:
@@ -20,17 +28,10 @@ private:
 	float m_squareSize;
 
 public:
+	CalibrationData calibrationData;
+
+public:
+	Calibration() = default;
 	Calibration(vector<Mat> images, Size size, float squareSize);
 	CalibrationData Calibrate();
-};
-
-struct CalibrationData
-{
-	Mat camMatrix, distortion;
-
-	CalibrationData(Mat camMatrix, Mat distortion)
-		: camMatrix(camMatrix), distortion(distortion)
-	{
-
-	}
 };
