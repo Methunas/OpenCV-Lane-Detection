@@ -147,10 +147,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Resources\Source\BirdsEye.cpp" />
     <ClCompile Include="Resources\Source\Calibration.cpp" />
     <ClCompile Include="Resources\Source\Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Resources\Source\json.hpp" />
+    <ClInclude Include="Resources\Source\BirdsEye.h" />
     <ClInclude Include="Resources\Source\Calibration.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

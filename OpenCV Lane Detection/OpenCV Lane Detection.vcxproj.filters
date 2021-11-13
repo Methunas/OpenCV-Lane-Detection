@@ -21,9 +21,18 @@
     <ClCompile Include="Resources\Source\Calibration.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Resources\Source\BirdsEye.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources\Source\Calibration.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Resources\Source\BirdsEye.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Resources\Source\json.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
