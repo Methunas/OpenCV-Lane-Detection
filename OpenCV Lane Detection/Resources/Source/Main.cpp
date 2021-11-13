@@ -8,15 +8,20 @@
 using namespace std;
 using namespace filesystem;
 
-typedef struct UndistortMapData
+struct UndistortMapData
 {
     Mat map1, map2;
 };
 
 void ProcessFrame(Mat frame, CalibrationData calibrationData, UndistortMapData undistortMapData)
 {
-    Mat tmp = frame.clone();
-    remap(tmp, frame, undistortMapData.map1, undistortMapData.map2, INTER_LINEAR, BORDER_CONSTANT);
+    #pragma region Undistort
+
+    remap(frame.clone(), frame, undistortMapData.map1, undistortMapData.map2, INTER_LINEAR, BORDER_CONSTANT);
+    Mat cropped = frame(Range(20, frame.rows - 20), Range(20, frame.cols - 20));
+    frame = cropped.clone();
+
+    #pragma endregion
 
     #pragma region Birds Eye
 
@@ -65,13 +70,13 @@ int main(int argc, char* argv[])
             calibrationImages.push_back(imread(file.path().string()));
 
         calibrationData = Calibrate(calibrationImages, Size(9, 6), 1.0);
+
         calibrationData.OutputToFile("Resources\\SaveData", "calibration.json");
     }
-    
 
-    //Mat undistorted;
-    //undistort(calibrationImages[0], undistorted, calibrationData.camMatrix, calibrationData.distortion);
-    //imshow("un", undistorted);
+    Mat undistorted = imread("Resources\\Images\\Calibration\\calibration2.jpg");
+    undistort(undistorted.clone(), undistorted, calibrationData.camMatrix, calibrationData.distortion);
+    imshow("un", undistorted);
 
     #pragma endregion
 
@@ -79,8 +84,8 @@ int main(int argc, char* argv[])
     assert(video.isOpened());
 
     double fps = video.get(VideoCaptureProperties::CAP_PROP_FPS);
-    double frameDelay = 1000 / fps;
-    Size videoSize (video.get(cv::CAP_PROP_FRAME_HEIGHT), video.get(cv::CAP_PROP_FRAME_WIDTH));
+    int frameDelay = (int)(1000 / fps);
+    Size videoSize((int)video.get(cv::CAP_PROP_FRAME_WIDTH), (int)video.get(cv::CAP_PROP_FRAME_HEIGHT));
 
     UndistortMapData undistortMapData;
     initUndistortRectifyMap(calibrationData.camMatrix, calibrationData.distortion, Mat(),

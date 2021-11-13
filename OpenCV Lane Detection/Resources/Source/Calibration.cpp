@@ -1,5 +1,4 @@
 #include "Calibration.h"
-#include <iostream>
 
 CalibrationData Calibrate(vector<Mat> images, Size boardSize, float squareSize)
 {
