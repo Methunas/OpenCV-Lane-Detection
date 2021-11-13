@@ -1,24 +1,32 @@
 #include "Calibration.h"
+#include <iostream>
 
 CalibrationData Calibrate(vector<Mat> images, Size boardSize, float squareSize)
 {
+	if (images.empty())
+		return CalibrationData();
+
 	CalibrationData calibrationData;
 	vector<Point2f> corners;
 
 	for (Mat image : images)
 	{
-		Mat gray;
-		image.convertTo(gray, COLOR_RGB2GRAY);
+		// For some reason, OpenCV doesn't want to convert the image to gray
+		// It instead converts to 16FC3
+		//Mat gray;
+		//image.convertTo(gray, COLOR_RGB2GRAY);
+		Mat duplicate;
+		image.copyTo(duplicate);
 
 		bool hasCorners = findChessboardCorners(image, boardSize, corners);
 
 		if (hasCorners)
 		{
-			cornerSubPix(gray, corners, Size(5, 5), Size(-1, -1),
-				TermCriteria(TermCriteria::EPS | TermCriteria::COUNT, 30, 0.1));
+			//cornerSubPix(gray, corners, Size(5, 5), Size(-1, -1),
+			//	TermCriteria(TermCriteria::EPS | TermCriteria::MAX_ITER, 3, 0.1));
 
-			//drawChessboardCorners(gray, boardSize, corners, hasCorners);
-			//imshow("Corners", gray);
+			drawChessboardCorners(duplicate, boardSize, corners, hasCorners);
+			imshow("Corners", duplicate);
 		}
 
 		vector<Point3f> object;

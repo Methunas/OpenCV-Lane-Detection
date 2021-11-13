@@ -15,15 +15,15 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Main.cpp">
+    <ClCompile Include="Resources\Source\Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Calibration.cpp">
+    <ClCompile Include="Resources\Source\Calibration.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Calibration.h">
+    <ClInclude Include="Resources\Source\Calibration.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
