@@ -17,9 +17,8 @@ void ProcessFrame(Mat frame, CalibrationData calibrationData, UndistortMapData u
 {
     #pragma region Undistort
 
-    remap(frame.clone(), frame, undistortMapData.map1, undistortMapData.map2, INTER_LINEAR, BORDER_CONSTANT);
-    Mat cropped = frame(Range(20, frame.rows - 20), Range(20, frame.cols - 20));
-    frame = cropped.clone();
+    undistort(frame.clone(), frame, calibrationData.camMatrix, calibrationData.distortion);
+    //remap(frame.clone(), frame, undistortMapData.map1, undistortMapData.map2, INTER_LINEAR, BORDER_CONSTANT);
 
     #pragma endregion
 
@@ -62,7 +61,7 @@ int main(int argc, char* argv[])
 
     CalibrationData calibrationData;
 
-    if (!calibrationData.LoadFromFile("Resources\\SaveData", "calibration.json"))
+    if (!calibrationData.LoadFromFile("Resources\\SaveData"))
     {
         vector<Mat> calibrationImages;
 
@@ -71,12 +70,8 @@ int main(int argc, char* argv[])
 
         calibrationData = Calibrate(calibrationImages, Size(9, 6), 1.0);
 
-        calibrationData.OutputToFile("Resources\\SaveData", "calibration.json");
+        calibrationData.OutputToFile("Resources\\SaveData");
     }
-
-    Mat undistorted = imread("Resources\\Images\\Calibration\\calibration2.jpg");
-    undistort(undistorted.clone(), undistorted, calibrationData.camMatrix, calibrationData.distortion);
-    imshow("un", undistorted);
 
     #pragma endregion
 

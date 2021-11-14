@@ -28,7 +28,6 @@ CalibrationData Calibrate(vector<Mat> images, Size boardSize, float squareSize)
 			//	TermCriteria(TermCriteria::EPS | TermCriteria::MAX_ITER, 3, 0.1));
 
 			drawChessboardCorners(duplicate, boardSize, corners, hasCorners);
-			//imshow("Corners", duplicate);
 
 			vector<Point3f> object;
 

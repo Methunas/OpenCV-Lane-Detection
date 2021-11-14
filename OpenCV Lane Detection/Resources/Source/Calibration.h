@@ -6,60 +6,39 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include <filesystem>
-#include <fstream>
 
 using namespace std;
 using namespace cv;
 using namespace filesystem;
-using json = nlohmann::json;
 
 struct CalibrationData
 {
 	Mat camMatrix, distortion;
 
-	void OutputToFile(string path, string fileName)
+	void OutputToFile(string path)
 	{
-		vector<double> camMatrixData;
-		for (int i = 0; i < camMatrix.rows; i++)
-			for (int j = 0; j < camMatrix.cols; j++)
-				camMatrixData.push_back(camMatrix.at<double>(i, j));
-
-		vector<double> distortionData;
-		distortionData.assign(distortion.data, distortion.data + distortion.total() * distortion.channels());
-
-		json contents = {
-			{"camMatrix", camMatrixData},
-			{"distortion", distortionData}
-		};
-		
 		if (!exists(path))
 			create_directory(path);
 		
-		ofstream outStream(path + '\\' + fileName);
+		FileStorage outStream(path + "\\calibration.yml", FileStorage::WRITE);
 
-		if (outStream.fail())
+		if (!outStream.isOpened())
 			return;
 
-		outStream << contents;
+		outStream << "camMatrix" << camMatrix << "distortion" << distortion;
+		outStream.release();
 	}
 
-	bool LoadFromFile(string path, string fileName)
+	bool LoadFromFile(string path)
 	{
-		ifstream inStream(path + '\\' + fileName);
+		FileStorage inStream(path + "\\calibration.yml", FileStorage::READ);
 
-		if (inStream.fail())
+		if (!inStream.isOpened())
 			return false;
 
-		json contents;
-		inStream >> contents;
-
-		vector<double> camMatrixData = contents["camMatrix"];
-		camMatrix = Mat::zeros(Size(3, 3), CV_64F);
-		for (int i = 0; i < camMatrixData.size(); i++)
-			camMatrix.at<double>((i / 3), i % 3) = camMatrixData[i];
-
-		vector<double> distortionData = contents["distortion"];
-		distortion = Mat(5, 1, CV_64F, distortionData.data());
+		inStream["camMatrix"] >> camMatrix;
+		inStream["distortion"] >> distortion;
+		inStream.release();
 
 		return true;
 	}
