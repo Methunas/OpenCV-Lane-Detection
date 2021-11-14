@@ -21,7 +21,10 @@
     <ClCompile Include="Resources\Source\Calibration.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Resources\Source\BirdsEye.cpp">
+    <ClCompile Include="Resources\Source\SkyView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Resources\Source\LaneFilter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -29,10 +32,10 @@
     <ClInclude Include="Resources\Source\Calibration.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Resources\Source\BirdsEye.h">
+    <ClInclude Include="Resources\Source\SkyView.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Resources\Source\json.hpp">
+    <ClInclude Include="Resources\Source\LaneFilter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

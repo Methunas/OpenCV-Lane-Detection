@@ -1,4 +1,6 @@
 #include "Calibration.h"
+#include "LaneFilter.h"
+#include "SkyView.h"
 
 #include <iostream>
 #include <filesystem>
@@ -22,13 +24,14 @@ void ProcessFrame(Mat frame, CalibrationData calibrationData, UndistortMapData u
 
     #pragma endregion
 
-    #pragma region Birds Eye
+    #pragma region Sky View
 
-    vector<Point> sourcePoints({ {580, 460}, {205, 720}, {1110, 720}, {703, 460} });
-    vector<Point> destinationPoints({ {320, 0}, {320, 720}, {960, 720}, {960, 0} });
+    vector<Point2f> sourcePoints({ {580, 460}, {205, 720}, {1110, 720}, {703, 460} });
+    vector<Point2f> destinationPoints({ {320, 0}, {320, 720}, {960, 720}, {960, 0} });
 
-    for (Point point : sourcePoints)
-        circle(frame, point, 4, Scalar(0,0,255), FILLED);
+    Mat skyView;
+    SkyView(frame, skyView, sourcePoints, destinationPoints);
+    imshow("Sky View", skyView);
 
     #pragma endregion
 }
@@ -40,7 +43,6 @@ int main(int argc, char* argv[])
     cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_ERROR);
 
     string calibrationDirectory;
-    bool calibrationDataFile = false;
     string videoPath;
 
     for (int i = 0; i < argc; i++)
@@ -49,8 +51,6 @@ int main(int argc, char* argv[])
 
         if (arg == "-c")
             calibrationDirectory = argv[++i];
-        if (arg == "-d")
-            calibrationDataFile = true;
         if (arg == "-v")
             videoPath = argv[++i];
     }
