@@ -22,8 +22,6 @@ void LaneFilter(Mat& in, Mat& out, LaneFilterArgs args)
 	imshow("Sobel Threshold", sobelImage);
 
 	out = sobelImage | colorImage;
-	rectangle(out, Point(0,0), Point(125, out.rows), Scalar(0, 0, 0), -1);
-	rectangle(out, Point(out.cols, 0), Point(1200, out.rows), Scalar(0, 0, 0), -1);
 }
 
 void ColorMask(Mat& in, Mat& out, LaneFilterArgs args)
@@ -99,5 +97,5 @@ void SobelMask(Mat& in, Mat& out, LaneFilterArgs args)
 	threshold(direction, threshold3, args.directionThreshold.x, 255, THRESH_BINARY);
 	threshold(direction, threshold4, args.directionThreshold.y, 255, THRESH_BINARY);
 
-	out = threshold1 & threshold2 & ~threshold3 & ~threshold4;
+	out = threshold1 & threshold2 & threshold3 & ~threshold4;
 }

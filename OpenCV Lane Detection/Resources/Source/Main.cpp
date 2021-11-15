@@ -15,7 +15,7 @@ struct UndistortMapData
     Mat map1, map2;
 };
 
-void ProcessFrame(Mat frame, CalibrationData calibrationData, UndistortMapData undistortMapData)
+void ProcessFrame(Mat& frame, CalibrationData& calibrationData, UndistortMapData& undistortMapData)
 {
     #pragma region Undistort
 
@@ -38,9 +38,14 @@ void ProcessFrame(Mat frame, CalibrationData calibrationData, UndistortMapData u
     #pragma region Lane Filter
 
     Mat laneFilter;
-    LaneFilterArgs laneFilterArgs(220, 40, 205, Point2f(0.7f, 1.4f), 30, 20);
+    LaneFilterArgs laneFilterArgs(220, 40, 205, Point2f(0.7f, 1.4f), 40, 20);
 
-    LaneFilter(skyView, laneFilter, laneFilterArgs);
+    LaneFilter(frame, laneFilter, laneFilterArgs);
+    SkyView(laneFilter, laneFilter, sourcePoints, destinationPoints);
+
+    rectangle(laneFilter, Point(0, 0), Point(125, laneFilter.rows), Scalar(0, 0, 0), -1);
+    rectangle(laneFilter, Point(laneFilter.cols, 0), Point(1200, laneFilter.rows), Scalar(0, 0, 0), -1);
+
     imshow("Lane Filter", laneFilter);
 
     #pragma endregion
