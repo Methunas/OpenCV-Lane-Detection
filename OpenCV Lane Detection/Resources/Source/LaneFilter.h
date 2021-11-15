@@ -8,13 +8,13 @@ using namespace cv;
 struct LaneFilterArgs
 {
 	int saturationThreshold;
-	int lightThreshold;
-	int lightThresholdAgr;
-	Point2i gradientThreshold;
-	int magnificationThreshold;
+	int lightnessThreshold;
+	int lightnessThresholdAgr;
+	Point2f directionThreshold;
+	int magnitudeThreshold;
 	int xThreshold;
 };
 
-void ApplyLaneFilter(Mat in, Mat out, LaneFilterArgs args);
-void ApplyColorMask(Mat frame);
-void ApplySobelMask(Mat frame);
+void LaneFilter(Mat& in, Mat& out, LaneFilterArgs args);
+void ColorMask(Mat& in, Mat& out, LaneFilterArgs args);
+void SobelMask(Mat& in, Mat& out, LaneFilterArgs args);

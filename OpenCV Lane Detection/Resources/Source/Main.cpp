@@ -34,6 +34,16 @@ void ProcessFrame(Mat frame, CalibrationData calibrationData, UndistortMapData u
     imshow("Sky View", skyView);
 
     #pragma endregion
+
+    #pragma region Lane Filter
+
+    Mat laneFilter;
+    LaneFilterArgs laneFilterArgs(220, 40, 205, Point2f(0.7f, 1.4f), 30, 20);
+
+    LaneFilter(skyView, laneFilter, laneFilterArgs);
+    imshow("Lane Filter", laneFilter);
+
+    #pragma endregion
 }
 
 int main(int argc, char* argv[])
