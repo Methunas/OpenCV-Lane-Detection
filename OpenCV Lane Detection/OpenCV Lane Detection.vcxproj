@@ -147,12 +147,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Resources\Source\Curves.cpp" />
     <ClCompile Include="Resources\Source\LaneFilter.cpp" />
     <ClCompile Include="Resources\Source\SkyView.cpp" />
     <ClCompile Include="Resources\Source\Calibration.cpp" />
     <ClCompile Include="Resources\Source\Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Resources\Source\Curves.h" />
     <ClInclude Include="Resources\Source\LaneFilter.h" />
     <ClInclude Include="Resources\Source\SkyView.h" />
     <ClInclude Include="Resources\Source\Calibration.h" />

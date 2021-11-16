@@ -1,6 +1,7 @@
 #include "Calibration.h"
 #include "LaneFilter.h"
 #include "SkyView.h"
+#include "Curves.h"
 
 #include <iostream>
 #include <filesystem>
