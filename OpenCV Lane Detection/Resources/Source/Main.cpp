@@ -50,6 +50,12 @@ void ProcessFrame(Mat& frame, CalibrationData& calibrationData, UndistortMapData
     imshow("Lane Filter", laneFilter);
 
     #pragma endregion
+
+    #pragma region Line Fitting
+
+    CurveFit(laneFilter, 9, 100, 50);
+
+    #pragma endregion
 }
 
 int main(int argc, char* argv[])
