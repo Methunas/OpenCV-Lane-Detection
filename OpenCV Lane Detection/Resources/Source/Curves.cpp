@@ -69,6 +69,19 @@ Mat PolynomialFit(vector<Point>& points, int order)
 	return K;
 }
 
+void DrawCurve(Mat& inOut, Mat& K, vector<Point>& points, int order)
+{
+	for (int j = 0; j < inOut.cols; j++)
+	{
+		cv::Point2d point(j, 0);
+
+		for (int k = 0; k < 3; k++)
+			point.y += K.at<double>(k, 0) * pow(j, k);
+
+		circle(inOut, point, 3, cv::Scalar(255, 255, 255), -1, LineTypes::LINE_AA);
+	}
+}
+
 void CurveFit(Mat& in, CurveFitData& outCurveData, int numWindows, int windowWidth, int minPixelCount)
 {
 	int windowHeight = in.rows / numWindows;
@@ -114,6 +127,9 @@ void CurveFit(Mat& in, CurveFitData& outCurveData, int numWindows, int windowWid
 
 		leftWindowBounds.x = clamp(currentLeftX - midWindowWidth, 0, in.cols - windowWidth);
 		rightWindowBounds.x = clamp(currentRightX - midWindowWidth, 0, in.cols - windowWidth);
+
+		leftWindow = in(leftWindowBounds);
+		rightWindow = in(rightWindowBounds);
 		
 		rectangle(outCurveData.image, leftWindowBounds, Scalar::all(255));
 		rectangle(outCurveData.image, rightWindowBounds, Scalar::all(255));
@@ -121,40 +137,24 @@ void CurveFit(Mat& in, CurveFitData& outCurveData, int numWindows, int windowWid
 		vector<Point> leftWindowPixels;
 		vector<Point> rightWindowPixels;
 
-		findNonZero(leftWindow, leftWindowPixels);
-		findNonZero(rightWindow, rightWindowPixels);
-
-		for (Point point : leftWindowPixels)
-		{
-			point.x += leftWindowBounds.x;
-			point.y += leftWindowBounds.y;
-		}
-
-		for (Point point : rightWindowPixels)
-		{
-			point.x += rightWindowBounds.x;
-			point.y += rightWindowBounds.y;
-		}
-
 		leftWindow.copyTo(leftLane(leftWindowBounds));
-
-		leftLanePixels.insert(leftLanePixels.end(), leftWindowPixels.begin(), leftWindowPixels.end());
-		rightLanePixels.insert(rightLanePixels.end(), rightWindowPixels.begin(), rightWindowPixels.end());
+		rightWindow.copyTo(rightLane(rightWindowBounds));
 	}
+	rotate(leftLane, leftLane, ROTATE_90_CLOCKWISE);
+	rotate(rightLane, rightLane, ROTATE_90_CLOCKWISE);
 
-	Mat K = PolynomialFit(leftLanePixels, 2);
-	Mat polyFit = Mat::zeros(Size(in.cols, in.rows), CV_64F);
+	Mat polyFit = Mat::zeros(Size(leftLane.cols, leftLane.rows), CV_64F);
 
-	for (int j = leftLanePixels.at(0).x; j < leftLanePixels.at(leftLanePixels.size() - 1).x; j++)
-	{
-		cv::Point2d point(j, 0);
-		for (int k = 0; k < 3; k++)
-		{
-			point.y += K.at<double>(k, 0) * pow(j, k);
-		}
-		
-		circle(polyFit, point, 5, cv::Scalar(255, 255, 255), -1, LineTypes::LINE_AA);
-	}
+	findNonZero(leftLane, leftLanePixels);
+	findNonZero(rightLane, rightLanePixels);
 
-	cv::imshow("Poly Fit", leftLane * 255);
+	Mat leftK = PolynomialFit(leftLanePixels, 2);
+	Mat rightK = PolynomialFit(rightLanePixels, 2);
+
+	DrawCurve(polyFit, leftK, leftLanePixels, 2);
+	DrawCurve(polyFit, rightK, rightLanePixels, 2);
+
+	rotate(polyFit, polyFit, ROTATE_90_COUNTERCLOCKWISE);
+
+	cv::imshow("Poly Fit", polyFit * 255);
 }
