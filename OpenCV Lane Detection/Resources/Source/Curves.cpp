@@ -22,10 +22,8 @@ Point FindInitialLanePoints(Mat& in, Range heightRange)
 	return Point(lMaxP.x, rMaxP.x);
 }
 
-int FindWindowLanePoint(Mat& in, Rect bounds, int minPixelCount)
+int FindWindowLanePoint(Mat& window, Rect bounds, int minPixelCount)
 {
-	Mat window = in(bounds);
-
 	int pixelCount = countNonZero(window);
 
 	if (pixelCount == 0)
@@ -57,32 +55,60 @@ void CurveFit(Mat& in, CurveFitData& outCurveData, int numWindows, int windowWid
 	int currentLeftX = centers.x;
 	int currentRightX = centers.y + midImageWidth;
 
-	Rect leftWindow = Rect(
+	Rect leftWindowBounds = Rect(
 		currentLeftX - windowWidth / 2,
 		in.rows - windowHeight,
 		windowWidth, windowHeight);
 
-	Rect rightWindow = Rect(
+	Rect rightWindowBounds = Rect(
 		currentRightX - windowWidth / 2,
 		in.rows - windowHeight,
 		windowWidth, windowHeight);
+
+	vector<Point> leftLanePixels;
+	vector<Point> rightLanePixels;
 	
 	for (int i = 0; i < numWindows; i++)
 	{
-		leftWindow.y = in.rows - (i + 1) * windowHeight;
-		rightWindow.y = in.rows - (i + 1) * windowHeight;
+		leftWindowBounds.y = in.rows - (i + 1) * windowHeight;
+		rightWindowBounds.y = in.rows - (i + 1) * windowHeight;
 
-		int lanePointL = FindWindowLanePoint(in, leftWindow, minPixelCount);
-		int lanePointR = FindWindowLanePoint(in, rightWindow, minPixelCount);
+		Mat leftWindow = in(leftWindowBounds);
+		Mat rightWindow = in(rightWindowBounds);
+
+		int lanePointL = FindWindowLanePoint(leftWindow, leftWindowBounds, minPixelCount);
+		int lanePointR = FindWindowLanePoint(rightWindow, rightWindowBounds, minPixelCount);
 
 		currentLeftX += lanePointL - midWindowWidth;
 		currentRightX += lanePointR - midWindowWidth;
 
-		leftWindow.x = clamp(currentLeftX - midWindowWidth, 0, in.cols - windowWidth);
-		rightWindow.x = clamp(currentRightX - midWindowWidth, 0, in.cols - windowWidth);
+		leftWindowBounds.x = clamp(currentLeftX - midWindowWidth, 0, in.cols - windowWidth);
+		rightWindowBounds.x = clamp(currentRightX - midWindowWidth, 0, in.cols - windowWidth);
 		
-		rectangle(outCurveData.image, leftWindow, Scalar::all(255));
-		rectangle(outCurveData.image, rightWindow, Scalar::all(255));
-		cout << endl;
+		rectangle(outCurveData.image, leftWindowBounds, Scalar::all(255));
+		rectangle(outCurveData.image, rightWindowBounds, Scalar::all(255));
+
+		vector<Point> leftWindowPixels;
+		vector<Point> rightWindowPixels;
+
+		findNonZero(leftWindow, leftWindowPixels);
+		findNonZero(rightWindow, rightWindowPixels);
+
+		for (Point point : leftWindowPixels)
+		{
+			point.x += leftWindowBounds.x;
+			point.y += leftWindowBounds.y;
+		}
+
+		for (Point point : rightWindowPixels)
+		{
+			point.x += rightWindowBounds.x;
+			point.y += rightWindowBounds.y;
+		}
+
+		leftLanePixels.insert(leftLanePixels.end(), leftWindowPixels.begin(), leftWindowPixels.end());
+		rightLanePixels.insert(rightLanePixels.end(), rightWindowPixels.begin(), rightWindowPixels.end());
 	}
+
+	
 }
