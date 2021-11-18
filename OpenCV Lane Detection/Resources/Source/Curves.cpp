@@ -26,20 +26,22 @@ int FindWindowLanePoint(Mat& in, Rect bounds, int minPixelCount)
 {
 	Mat window = in(bounds);
 
+	int pixelCount = countNonZero(window);
+
+	if (pixelCount == 0)
+		return bounds.width / 2;
+
 	Mat hist;
 	reduce(window, hist, 0, REDUCE_SUM, CV_32F);
-
-	int numPixels = countNonZero(window);
-
-	if (numPixels < minPixelCount)
-		return bounds.width / 2;
 	
-	double min, max;
-	Point minPoint, maxPoint;
+	float average = 0.00f;
 
-	minMaxLoc(hist, &min, &max, &minPoint, &maxPoint);
+	for (int i = 0; i < hist.cols; i++)
+		average += hist.at<float>(i) * i;
 
-	return maxPoint.x;
+	average /= pixelCount;
+
+	return (int)average;
 }
 
 void CurveFit(Mat& in, CurveFitData& outCurveData, int numWindows, int windowWidth, int minPixelCount)
@@ -81,5 +83,6 @@ void CurveFit(Mat& in, CurveFitData& outCurveData, int numWindows, int windowWid
 		
 		rectangle(outCurveData.image, leftWindow, Scalar::all(255));
 		rectangle(outCurveData.image, rightWindow, Scalar::all(255));
+		cout << endl;
 	}
 }
