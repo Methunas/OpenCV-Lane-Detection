@@ -48,35 +48,28 @@ Mat PolynomialFit(vector<Point>& points, int order)
 	cv::Mat Y(points.size(), 1, CV_64F);
 
 	for (int i = 0; i < U.rows; i++)
-	{
 		for (int j = 0; j < U.cols; j++)
-		{
-			U.at<double>(i, j) = pow(points[i].x, j);
-		}
-	}
+			U.at<double>(i, j) = pow(points[i].y, j);
 
 	for (int i = 0; i < Y.rows; i++)
-	{
-		Y.at<double>(i, 0) = points[i].y;
-	}
+		Y.at<double>(i, 0) = points[i].x;
 
 	cv::Mat K((order + 1), 1, CV_64F);
+
 	if (U.data != NULL)
-	{
 		K = (U.t() * U).inv() * U.t() * Y;
-	}
 
 	return K;
 }
 
 void DrawCurve(Mat& inOut, Mat& K, vector<Point>& points, int order)
 {
-	for (int j = 0; j < inOut.cols; j++)
+	for (int j = 0; j < inOut.rows; j++)
 	{
-		cv::Point2d point(j, 0);
+		cv::Point2d point(0, j);
 
 		for (int k = 0; k < 3; k++)
-			point.y += K.at<double>(k, 0) * pow(j, k);
+			point.x += K.at<double>(k, 0) * pow(j, k);
 
 		circle(inOut, point, 3, cv::Scalar(255, 255, 255), -1, LineTypes::LINE_AA);
 	}
@@ -140,8 +133,6 @@ void CurveFit(Mat& in, CurveFitData& outCurveData, int numWindows, int windowWid
 		leftWindow.copyTo(leftLane(leftWindowBounds));
 		rightWindow.copyTo(rightLane(rightWindowBounds));
 	}
-	rotate(leftLane, leftLane, ROTATE_90_CLOCKWISE);
-	rotate(rightLane, rightLane, ROTATE_90_CLOCKWISE);
 
 	Mat polyFit = Mat::zeros(Size(leftLane.cols, leftLane.rows), CV_64F);
 
@@ -153,8 +144,6 @@ void CurveFit(Mat& in, CurveFitData& outCurveData, int numWindows, int windowWid
 
 	DrawCurve(polyFit, leftK, leftLanePixels, 2);
 	DrawCurve(polyFit, rightK, rightLanePixels, 2);
-
-	rotate(polyFit, polyFit, ROTATE_90_COUNTERCLOCKWISE);
 
 	cv::imshow("Poly Fit", polyFit * 255);
 }
