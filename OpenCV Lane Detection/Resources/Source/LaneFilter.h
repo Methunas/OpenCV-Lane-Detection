@@ -16,5 +16,3 @@ struct LaneFilterArgs
 };
 
 void LaneFilter(Mat& in, Mat& out, LaneFilterArgs args);
-void ColorMask(Mat& in, Mat& out, LaneFilterArgs args);
-void SobelMask(Mat& in, Mat& out, LaneFilterArgs args);

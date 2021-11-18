@@ -18,4 +18,4 @@ struct CurveFitData
 	string vehicleInformation;
 };
 
-CurveFitData CurveFit(Mat& in, int numWindows, int margin, int minPixels);
+void CurveFit(Mat& in, CurveFitData& outCurveData, int numWindows, int windowWidth, int minPixelCount);

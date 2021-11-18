@@ -51,9 +51,14 @@ void ProcessFrame(Mat& frame, CalibrationData& calibrationData, UndistortMapData
 
     #pragma endregion
 
-    #pragma region Line Fitting
+    #pragma region Curve Fitting
 
-    CurveFit(laneFilter, 9, 100, 50);
+    Mat binary;
+    threshold(laneFilter, binary, 150, 1, THRESH_BINARY);
+
+    CurveFitData curveData;
+    CurveFit(binary, curveData, 9, 200, 50);
+    imshow("Curve Fitting", curveData.image * 255);
 
     #pragma endregion
 }

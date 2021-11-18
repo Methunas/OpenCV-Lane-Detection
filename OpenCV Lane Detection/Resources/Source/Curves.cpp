@@ -4,31 +4,82 @@
 #include <opencv2/highgui.hpp>
 #include <iostream>
 
-CurveFitData CurveFit(Mat& in, int numWindows, int margin, int minPixels)
+Point FindInitialLanePoints(Mat& in, Range heightRange)
 {
-	int windowHeight = in.rows / numWindows;
-	int midWidth = in.cols / 2;
-	
+	Mat lowerWindow = in(heightRange, Range::all());
 
-	Mat lowerHalf = in(Range((float) in.rows / 2, in.rows), Range::all());
-	
 	Mat hist;
-	reduce(lowerHalf, hist, 0, REDUCE_SUM, CV_32F);
+	reduce(lowerWindow, hist, 0, REDUCE_SUM, CV_32F);
 
-	Mat lowerLeft = hist(Range::all(), Range(0, midWidth));
-	Mat lowerRight = hist(Range::all(), Range(midWidth, hist.cols));
+	Mat lowerLeft = hist(Range::all(), Range(0, in.cols / 2));
+	Mat lowerRight = hist(Range::all(), Range(in.cols / 2, hist.cols));
 
 	double lMin, lMax, rMin, rMax;
 	Point lMinP, lMaxP, rMinP, rMaxP;
 	minMaxLoc(lowerLeft, &lMin, &lMax, &lMinP, &lMaxP);
 	minMaxLoc(lowerRight, &rMin, &rMax, &rMinP, &rMaxP);
+
+	return Point(lMaxP.x, rMaxP.x);
+}
+
+int FindWindowLanePoint(Mat& in, Rect bounds, int minPixelCount)
+{
+	Mat window = in(bounds);
+
+	Mat hist;
+	reduce(window, hist, 0, REDUCE_SUM, CV_32F);
+
+	int numPixels = countNonZero(window);
+
+	if (numPixels < minPixelCount)
+		return bounds.width / 2;
 	
-	lowerHalf.convertTo(lowerHalf, CV_8UC3);
-	circle(lowerHalf, Point(lMaxP.x, lowerHalf.rows), 5, Scalar(255, 0, 0));
-	circle(lowerHalf, Point(midWidth + rMaxP.x, lowerHalf.rows), 5, Scalar(255, 0, 0));
-	cout << lMaxP << endl << rMaxP << endl;
+	double min, max;
+	Point minPoint, maxPoint;
 
-	imshow("Lower Half", lowerHalf);
+	minMaxLoc(hist, &min, &max, &minPoint, &maxPoint);
 
-	return CurveFitData();
+	return maxPoint.x;
+}
+
+void CurveFit(Mat& in, CurveFitData& outCurveData, int numWindows, int windowWidth, int minPixelCount)
+{
+	int windowHeight = in.rows / numWindows;
+	int midImageWidth = in.cols / 2;
+	int midWindowWidth = windowWidth / 2;
+
+	outCurveData.image = in.clone();
+
+	Point centers = FindInitialLanePoints(in, Range(in.rows / 2, in.rows));
+
+	int currentLeftX = centers.x;
+	int currentRightX = centers.y + midImageWidth;
+
+	Rect leftWindow = Rect(
+		currentLeftX - windowWidth / 2,
+		in.rows - windowHeight,
+		windowWidth, windowHeight);
+
+	Rect rightWindow = Rect(
+		currentRightX - windowWidth / 2,
+		in.rows - windowHeight,
+		windowWidth, windowHeight);
+	
+	for (int i = 0; i < numWindows; i++)
+	{
+		leftWindow.y = in.rows - (i + 1) * windowHeight;
+		rightWindow.y = in.rows - (i + 1) * windowHeight;
+
+		int lanePointL = FindWindowLanePoint(in, leftWindow, minPixelCount);
+		int lanePointR = FindWindowLanePoint(in, rightWindow, minPixelCount);
+
+		currentLeftX += lanePointL - midWindowWidth;
+		currentRightX += lanePointR - midWindowWidth;
+
+		leftWindow.x = clamp(currentLeftX - midWindowWidth, 0, in.cols - windowWidth);
+		rightWindow.x = clamp(currentRightX - midWindowWidth, 0, in.cols - windowWidth);
+		
+		rectangle(outCurveData.image, leftWindow, Scalar::all(255));
+		rectangle(outCurveData.image, rightWindow, Scalar::all(255));
+	}
 }

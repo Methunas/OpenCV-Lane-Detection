@@ -7,23 +7,6 @@
 using namespace std;
 using namespace cv;
 
-void LaneFilter(Mat& in, Mat& out, LaneFilterArgs args)
-{
-	Mat hlsImage;
-	in.convertTo(hlsImage, COLOR_RGB2HLS);
-
-	Mat colorImage;
-	ColorMask(hlsImage, colorImage, args);
-
-	imshow("Color Threshold", colorImage);
-
-	Mat sobelImage;
-	SobelMask(hlsImage, sobelImage, args);
-	imshow("Sobel Threshold", sobelImage);
-
-	out = sobelImage | colorImage;
-}
-
 void ColorMask(Mat& in, Mat& out, LaneFilterArgs args)
 {
 	Mat splitChannels[3];
@@ -98,4 +81,21 @@ void SobelMask(Mat& in, Mat& out, LaneFilterArgs args)
 	threshold(direction, threshold4, args.directionThreshold.y, 255, THRESH_BINARY);
 
 	out = threshold1 & threshold2 & threshold3 & ~threshold4;
+}
+
+void LaneFilter(Mat& in, Mat& out, LaneFilterArgs args)
+{
+	Mat hlsImage;
+	in.convertTo(hlsImage, COLOR_RGB2HLS);
+
+	Mat colorImage;
+	ColorMask(hlsImage, colorImage, args);
+
+	imshow("Color Threshold", colorImage);
+
+	Mat sobelImage;
+	SobelMask(hlsImage, sobelImage, args);
+	imshow("Sobel Threshold", sobelImage);
+
+	out = sobelImage | colorImage;
 }
