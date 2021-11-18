@@ -42,6 +42,33 @@ int FindWindowLanePoint(Mat& window, Rect bounds, int minPixelCount)
 	return (int)average;
 }
 
+Mat PolynomialFit(vector<Point>& points, int order)
+{
+	cv::Mat U(points.size(), (order + 1), CV_64F);
+	cv::Mat Y(points.size(), 1, CV_64F);
+
+	for (int i = 0; i < U.rows; i++)
+	{
+		for (int j = 0; j < U.cols; j++)
+		{
+			U.at<double>(i, j) = pow(points[i].x, j);
+		}
+	}
+
+	for (int i = 0; i < Y.rows; i++)
+	{
+		Y.at<double>(i, 0) = points[i].y;
+	}
+
+	cv::Mat K((order + 1), 1, CV_64F);
+	if (U.data != NULL)
+	{
+		K = (U.t() * U).inv() * U.t() * Y;
+	}
+
+	return K;
+}
+
 void CurveFit(Mat& in, CurveFitData& outCurveData, int numWindows, int windowWidth, int minPixelCount)
 {
 	int windowHeight = in.rows / numWindows;
@@ -67,6 +94,9 @@ void CurveFit(Mat& in, CurveFitData& outCurveData, int numWindows, int windowWid
 
 	vector<Point> leftLanePixels;
 	vector<Point> rightLanePixels;
+
+	Mat leftLane = Mat::zeros(Size(in.cols, in.rows), CV_8U);
+	Mat rightLane = Mat::zeros(Size(in.cols, in.rows), CV_8U);
 	
 	for (int i = 0; i < numWindows; i++)
 	{
@@ -106,9 +136,25 @@ void CurveFit(Mat& in, CurveFitData& outCurveData, int numWindows, int windowWid
 			point.y += rightWindowBounds.y;
 		}
 
+		leftWindow.copyTo(leftLane(leftWindowBounds));
+
 		leftLanePixels.insert(leftLanePixels.end(), leftWindowPixels.begin(), leftWindowPixels.end());
 		rightLanePixels.insert(rightLanePixels.end(), rightWindowPixels.begin(), rightWindowPixels.end());
 	}
 
-	
+	Mat K = PolynomialFit(leftLanePixels, 2);
+	Mat polyFit = Mat::zeros(Size(in.cols, in.rows), CV_64F);
+
+	for (int j = leftLanePixels.at(0).x; j < leftLanePixels.at(leftLanePixels.size() - 1).x; j++)
+	{
+		cv::Point2d point(j, 0);
+		for (int k = 0; k < 3; k++)
+		{
+			point.y += K.at<double>(k, 0) * pow(j, k);
+		}
+		
+		circle(polyFit, point, 5, cv::Scalar(255, 255, 255), -1, LineTypes::LINE_AA);
+	}
+
+	cv::imshow("Poly Fit", leftLane * 255);
 }
