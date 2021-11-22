@@ -83,19 +83,13 @@ void SobelMask(Mat& in, Mat& out, LaneFilterArgs args)
 	out = threshold1 & threshold2 & threshold3 & ~threshold4;
 }
 
-void LaneFilter(Mat& in, Mat& out, LaneFilterArgs args)
+void LaneFilter(Mat& in, LaneFilterData& out, LaneFilterArgs args)
 {
 	Mat hlsImage;
 	in.convertTo(hlsImage, COLOR_RGB2HLS);
 
-	Mat colorImage;
-	ColorMask(hlsImage, colorImage, args);
+	ColorMask(hlsImage, out.colorMask, args);
+	SobelMask(hlsImage, out.sobelMask, args);
 
-	imshow("Color Threshold", colorImage);
-
-	Mat sobelImage;
-	SobelMask(hlsImage, sobelImage, args);
-	imshow("Sobel Threshold", sobelImage);
-
-	out = sobelImage | colorImage;
+	out.combinedMask = out.colorMask | out.sobelMask;
 }

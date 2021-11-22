@@ -79,7 +79,20 @@ vector<Point> GetCurvePoints(Mat& K, vector<Point>& points, int rows, int order)
 	return curvePoints;
 }
 
-void CurveFit(Mat& in, CurveFitData& outCurveData, int numWindows, int windowWidth, int minPixelCount)
+void GetVehiclePosition(CurveFitData& data, double metersPerPixel)
+{
+	int midWidth = data.image.cols / 2;
+	
+
+	int leftPoint = data.leftCurvePoints[data.leftCurvePoints.size() - 1].x;
+	int rightPoint = data.rightCurvePoints[data.leftCurvePoints.size() - 1].x;
+
+	double pixelPosition = leftPoint + (rightPoint - leftPoint) / 2.0;
+	
+	data.vehiclePosition = (pixelPosition - midWidth) * metersPerPixel;
+}
+
+void CurveFit(Mat& in, CurveFitData& outCurveData, double metersPerPixel, int numWindows, int windowWidth, int minPixelCount)
 {
 	int windowHeight = in.rows / numWindows;
 	int midImageWidth = in.cols / 2;
@@ -128,8 +141,8 @@ void CurveFit(Mat& in, CurveFitData& outCurveData, int numWindows, int windowWid
 		leftWindow = in(leftWindowBounds);
 		rightWindow = in(rightWindowBounds);
 		
-		rectangle(outCurveData.image, leftWindowBounds, Scalar::all(255));
-		rectangle(outCurveData.image, rightWindowBounds, Scalar::all(255));
+		rectangle(outCurveData.image, leftWindowBounds, Scalar::all(255), 3);
+		rectangle(outCurveData.image, rightWindowBounds, Scalar::all(255), 3);
 
 		vector<Point> leftWindowPixels;
 		vector<Point> rightWindowPixels;
@@ -155,4 +168,6 @@ void CurveFit(Mat& in, CurveFitData& outCurveData, int numWindows, int windowWid
 	for (Point point : outCurveData.rightCurvePoints)
 		circle(polyFit, point, 1, cv::Scalar(255, 255, 255), -1, LineTypes::LINE_AA);
 	*/
+
+	GetVehiclePosition(outCurveData, metersPerPixel);
 }

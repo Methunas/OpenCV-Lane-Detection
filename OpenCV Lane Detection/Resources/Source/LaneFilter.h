@@ -15,4 +15,9 @@ struct LaneFilterArgs
 	int xThreshold;
 };
 
-void LaneFilter(Mat& in, Mat& out, LaneFilterArgs args);
+struct LaneFilterData
+{
+	Mat colorMask, sobelMask, combinedMask;
+};
+
+void LaneFilter(Mat& in, LaneFilterData& out, LaneFilterArgs args);
