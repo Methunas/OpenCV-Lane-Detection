@@ -62,17 +62,21 @@ Mat PolynomialFit(vector<Point>& points, int order)
 	return K;
 }
 
-void DrawCurve(Mat& inOut, Mat& K, vector<Point>& points, int order)
+vector<Point> GetCurvePoints(Mat& K, vector<Point>& points, int rows, int order)
 {
-	for (int j = 0; j < inOut.rows; j++)
+	vector<Point> curvePoints;
+	
+	for (int j = 0; j < rows; j++)
 	{
-		cv::Point2d point(0, j);
+		Point2d point(0, j);
 
-		for (int k = 0; k < 3; k++)
+		for (int k = 0; k < order + 1; k++)
 			point.x += K.at<double>(k, 0) * pow(j, k);
 
-		circle(inOut, point, 3, cv::Scalar(255, 255, 255), -1, LineTypes::LINE_AA);
+		curvePoints.push_back(point);
 	}
+
+	return curvePoints;
 }
 
 void CurveFit(Mat& in, CurveFitData& outCurveData, int numWindows, int windowWidth, int minPixelCount)
@@ -81,7 +85,7 @@ void CurveFit(Mat& in, CurveFitData& outCurveData, int numWindows, int windowWid
 	int midImageWidth = in.cols / 2;
 	int midWindowWidth = windowWidth / 2;
 
-	outCurveData.image = in.clone();
+	outCurveData.image = in.clone() * 255;
 
 	Point centers = FindInitialLanePoints(in, Range(in.rows / 2, in.rows));
 
@@ -134,16 +138,21 @@ void CurveFit(Mat& in, CurveFitData& outCurveData, int numWindows, int windowWid
 		rightWindow.copyTo(rightLane(rightWindowBounds));
 	}
 
-	Mat polyFit = Mat::zeros(Size(leftLane.cols, leftLane.rows), CV_64F);
+	Mat polyFit = Mat::zeros(Size(leftLane.cols, leftLane.rows), CV_8U);
 
 	findNonZero(leftLane, leftLanePixels);
 	findNonZero(rightLane, rightLanePixels);
 
-	Mat leftK = PolynomialFit(leftLanePixels, 2);
-	Mat rightK = PolynomialFit(rightLanePixels, 2);
+	outCurveData.leftPixelK = PolynomialFit(leftLanePixels, 2);
+	outCurveData.rightPixelK = PolynomialFit(rightLanePixels, 2);
 
-	DrawCurve(polyFit, leftK, leftLanePixels, 2);
-	DrawCurve(polyFit, rightK, rightLanePixels, 2);
+	outCurveData.leftCurvePoints = GetCurvePoints(outCurveData.leftPixelK, leftLanePixels, polyFit.rows, 2);
+	outCurveData.rightCurvePoints = GetCurvePoints(outCurveData.rightPixelK, rightLanePixels, polyFit.rows, 2);
+	/*
+	for (Point point : outCurveData.leftCurvePoints)
+		circle(polyFit, point, 1, cv::Scalar(255, 255, 255), -1, LineTypes::LINE_AA);
 
-	cv::imshow("Poly Fit", polyFit * 255);
+	for (Point point : outCurveData.rightCurvePoints)
+		circle(polyFit, point, 1, cv::Scalar(255, 255, 255), -1, LineTypes::LINE_AA);
+	*/
 }

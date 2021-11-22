@@ -58,7 +58,15 @@ void ProcessFrame(Mat& frame, CalibrationData& calibrationData, UndistortMapData
 
     CurveFitData curveData;
     CurveFit(binary, curveData, 9, 200, 50);
-    imshow("Curve Fitting", curveData.image * 255);
+    imshow("Curve Fitting", curveData.image);
+
+    #pragma endregion
+
+    #pragma region Lane Projection
+
+    Mat projected;
+    ProjectLane(frame, projected, destinationPoints, sourcePoints, curveData);
+    imshow("Lane Projection", projected);
 
     #pragma endregion
 }
