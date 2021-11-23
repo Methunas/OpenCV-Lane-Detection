@@ -18,15 +18,14 @@ struct UndistortMapData
 
 void ProcessFrame(Mat& frame, CalibrationData& calibrationData, UndistortMapData& undistortMapData, bool showStepsInNewWindows, bool combineStepsInFinalFrame)
 {
-    #pragma region Undistort
-
+    // Undistort the frame using the calibration data
     undistort(frame.clone(), frame, calibrationData.camMatrix, calibrationData.distortion);
+
+    // Below function is meant to be used as a faster replacement to undistort, but it doesn't have the same output
     //remap(frame.clone(), frame, undistortMapData.map1, undistortMapData.map2, INTER_LINEAR, BORDER_CONSTANT);
 
-    #pragma endregion
-
-    #pragma region Sky View
-
+    // Define the points which will be used to warp the perspective
+    // Points from the car towards the horizon, aligned with a centered lane
     vector<Point2f> sourcePoints({ {580, 460}, {205, 720}, {1110, 720}, {703, 460} });
     vector<Point2f> destinationPoints({ {320, 0}, {320, 720}, {960, 720}, {960, 0} });
 
@@ -36,10 +35,7 @@ void ProcessFrame(Mat& frame, CalibrationData& calibrationData, UndistortMapData
     if (showStepsInNewWindows)
         imshow("Sky View", skyView);
 
-    #pragma endregion
-
-    #pragma region Lane Filter
-
+    // Filter out the lane using a color mask and sobel mask on the saturation and lightness of the image
     LaneFilterArgs laneFilterArgs(220, 40, 205, Point2f(0.7f, 1.4f), 40, 20);
 
     LaneFilterData laneFilterData;
@@ -49,6 +45,7 @@ void ProcessFrame(Mat& frame, CalibrationData& calibrationData, UndistortMapData
     Mat binary;
     threshold(laneFilterData.combinedMask, binary, 150, 1, THRESH_BINARY);
 
+    // Remove unnecessary edge points
     rectangle(laneFilterData.combinedMask, Point(0, 0), Point(125, laneFilterData.combinedMask.rows), Scalar(0, 0, 0), -1);
     rectangle(laneFilterData.combinedMask, Point(laneFilterData.combinedMask.cols, 0), Point(1200, laneFilterData.combinedMask.rows), Scalar(0, 0, 0), -1);
 
@@ -59,38 +56,37 @@ void ProcessFrame(Mat& frame, CalibrationData& calibrationData, UndistortMapData
         imshow("Lane Filter", binary * 255);
     }
 
-    #pragma endregion
-
-    #pragma region Curve Fitting
-
+    // Fit a curve to the lane points from the lane filtering
     CurveFitData curveData;
-    double metersPerPixel = 3.7 / 700;
-    CurveFit(binary, curveData, metersPerPixel, 9, 200, 50);
+    double metersPerPixelX = 3.7 / 700;
+    double metersPerPixelY = 30.0 / 720;
+
+    CurveFit(binary, curveData, metersPerPixelX, metersPerPixelY, 9, 200, 50);
 
     if (showStepsInNewWindows)
         imshow("Curve Fitting", curveData.image);
 
-    #pragma endregion
-
-    #pragma region Lane Projection
-
+    // Fill in the lane pixels and undo the sky view perspective warp
     Mat projected;
     ProjectLane(frame, projected, destinationPoints, sourcePoints, curveData);
 
     if (showStepsInNewWindows)
         imshow("Lane Projection", projected);
 
-    #pragma endregion
-
     frame = projected;
 
+    // Add the results to the frame
     string posText = "Vehicle Position: " +
-        to_string(curveData.vehiclePosition) +
-        (curveData.vehiclePosition < 0 ? "m left" : "m right") +
+        to_string(abs(curveData.vehiclePosition)) +
+        (curveData.vehiclePosition < 0 ? "m right" : "m left") +
         " of center";
+
+    string leftRadiusText = "Left Radius: " + to_string(curveData.leftRadius);
+    string rightRadiusText = "Right Radius: " + to_string(curveData.rightRadius);
     
     if (combineStepsInFinalFrame)
     {
+        // Resize the individual frames to 1/5 their size
         double viewWidth = frame.cols / 5.0;
         double viewHeight = frame.rows / 5.0;
 
@@ -100,39 +96,45 @@ void ProcessFrame(Mat& frame, CalibrationData& calibrationData, UndistortMapData
         resize(binary, binary, Size(), 0.2, 0.2);
         resize(curveData.image, curveData.image, Size(), 0.2, 0.2);
 
-        binary *= 255;
+        binary *= 255; // Needs to be multiplied to be visible
 
+        // Convert from CV_8U to CV_8UC3
         cvtColor(laneFilterData.colorMask, laneFilterData.colorMask, COLOR_GRAY2BGR);
         cvtColor(laneFilterData.sobelMask, laneFilterData.sobelMask, COLOR_GRAY2BGR);
         cvtColor(binary, binary, COLOR_GRAY2BGR);
         cvtColor(curveData.image, curveData.image, COLOR_GRAY2BGR);
 
+        // Copy the frames to the top of the final frame
         skyView.copyTo(frame(Rect(0, 0, viewWidth, viewHeight)));
         laneFilterData.colorMask.copyTo(frame(Rect(viewWidth, 0, viewWidth, viewHeight)));
         laneFilterData.sobelMask.copyTo(frame(Rect(viewWidth * 2, 0, viewWidth, viewHeight)));
         binary.copyTo(frame(Rect(viewWidth * 3, 0, viewWidth, viewHeight)));
         curveData.image.copyTo(frame(Rect(viewWidth * 4, 0, viewWidth, viewHeight)));
 
+        // Draw rectangles around the frames to show their borders
         rectangle(frame, Rect(0, 0, viewWidth, viewHeight), Scalar_(0, 0, 255));
         rectangle(frame, Rect(viewWidth, 0, viewWidth, viewHeight), Scalar_(0, 0, 255));
         rectangle(frame, Rect(viewWidth * 2, 0, viewWidth, viewHeight), Scalar_(0, 0, 255));
         rectangle(frame, Rect(viewWidth * 3, 0, viewWidth, viewHeight), Scalar_(0, 0, 255));
         rectangle(frame, Rect(viewWidth * 4, 0, viewWidth, viewHeight), Scalar_(0, 0, 255));
 
+        // Draw the lane data as text
         putText(frame, posText, Point(15, viewHeight + 20), FONT_HERSHEY_DUPLEX, 0.75, Scalar(0, 0, 0), 2, FILLED);
-        // radius info
+        putText(frame, leftRadiusText, Point(frame.cols - 400, viewHeight + 20), FONT_HERSHEY_DUPLEX, 0.75, Scalar(0, 0, 0), 2, FILLED);
+        putText(frame, rightRadiusText, Point(frame.cols - 400, viewHeight + 40), FONT_HERSHEY_DUPLEX, 0.75, Scalar(0, 0, 0), 2, FILLED);
     }
     else
     {
+        // Draw the lane data as text
         putText(frame, posText, Point(15, 20), FONT_HERSHEY_DUPLEX, 0.75, Scalar(0, 0, 0), 2, FILLED);
-        // radius info
+        putText(frame, leftRadiusText, Point(frame.cols - 400, 20), FONT_HERSHEY_DUPLEX, 0.75, Scalar(0, 0, 0), 2, FILLED);
+        putText(frame, rightRadiusText, Point(frame.cols - 400, 40), FONT_HERSHEY_DUPLEX, 0.75, Scalar(0, 0, 0), 2, FILLED);
     }
 }
 
 int main(int argc, char* argv[])
 {
-    #pragma region Argument Parse
-
+    // Parse the arguments
     cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_ERROR);
 
     string calibrationDirectory;
@@ -154,10 +156,8 @@ int main(int argc, char* argv[])
             combineStepsInFinalFrame = true;
     }
 
-    #pragma endregion
-
-    #pragma region Calibration
-
+    // Calibrate the camera with all of the images in the SaveData folder
+    // Load from file if it has already been calibrated
     CalibrationData calibrationData;
 
     if (!calibrationData.LoadFromFile("Resources\\SaveData"))
@@ -172,8 +172,7 @@ int main(int argc, char* argv[])
         calibrationData.OutputToFile("Resources\\SaveData");
     }
 
-    #pragma endregion
-
+    // Read the video from the specified path and get its file properties
     VideoCapture video(videoPath);
     assert(video.isOpened());
 
@@ -181,6 +180,7 @@ int main(int argc, char* argv[])
     int frameDelay = (int)(1000 / fps);
     Size videoSize((int)video.get(cv::CAP_PROP_FRAME_WIDTH), (int)video.get(cv::CAP_PROP_FRAME_HEIGHT));
 
+    // Generate the undistory maps for use with the remap() function in ProcessFrame()
     UndistortMapData undistortMapData;
     initUndistortRectifyMap(calibrationData.camMatrix, calibrationData.distortion, Mat(),
         getOptimalNewCameraMatrix(calibrationData.camMatrix, calibrationData.distortion, videoSize, 1, videoSize, 0), 
@@ -191,6 +191,7 @@ int main(int argc, char* argv[])
         Mat frame;
         video >> frame;
 
+        // Reset the frame position if all frames have been displayed
         if (frame.empty())
         {
             video.set(VideoCaptureProperties::CAP_PROP_POS_FRAMES, 0);
@@ -200,7 +201,6 @@ int main(int argc, char* argv[])
         ProcessFrame(frame, calibrationData, undistortMapData, showStepsInNewWindows, combineStepsInFinalFrame);
 
         imshow("Lane Detection", frame);
-
         waitKey(frameDelay);
     }
 

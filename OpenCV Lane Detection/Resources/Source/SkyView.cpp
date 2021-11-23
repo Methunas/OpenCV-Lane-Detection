@@ -11,6 +11,7 @@ using namespace cv;
 
 void SkyView(Mat& in, Mat& out, vector<Point2f> sourcePoints, vector<Point2f> destinationPoints)
 {
+	// Warp the image into sky view using the specified points
 	Mat warpMatrix = getPerspectiveTransform(sourcePoints, destinationPoints);
 	warpPerspective(in, out, warpMatrix, in.size(), INTER_LINEAR);
 }
@@ -18,6 +19,8 @@ void SkyView(Mat& in, Mat& out, vector<Point2f> sourcePoints, vector<Point2f> de
 void ProjectLane(Mat& originalIn, Mat& out, vector<Point2f> sourcePoints, vector<Point2f> destinationPoints, CurveFitData curveData, Scalar color)
 {
 	Mat lane = Mat::zeros(originalIn.size(), CV_8UC3);
+
+	// Create a new vector that outlines the bounds of the polygon (clockwise from the bottom left) and fill the shape
 	vector<Point> allLanePoints;
 
 	allLanePoints.insert(allLanePoints.end(), curveData.leftCurvePoints.begin(), curveData.leftCurvePoints.end());
@@ -25,6 +28,7 @@ void ProjectLane(Mat& originalIn, Mat& out, vector<Point2f> sourcePoints, vector
 
 	fillPoly(lane, allLanePoints, color);
 
+	// Undo the sky view and add the lane to the original image
 	Mat warpMatrix = getPerspectiveTransform(sourcePoints, destinationPoints);
 	warpPerspective(lane, lane, warpMatrix, lane.size(), INTER_LINEAR);
 

@@ -40,6 +40,7 @@ CalibrationData Calibrate(vector<Mat> images, Size boardSize, float squareSize)
 		}
 	}
 
+	// Get the calibration matrix and distortion coefficients from the chessboard corners
 	calibrateCamera(objectPoints, imagePoints, images[0].size(), calibrationData.camMatrix, 
 		calibrationData.distortion, rotationVecs, transformationVecs);
 

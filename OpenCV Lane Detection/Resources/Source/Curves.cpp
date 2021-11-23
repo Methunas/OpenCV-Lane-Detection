@@ -62,6 +62,26 @@ Mat PolynomialFit(vector<Point>& points, int order)
 	return K;
 }
 
+Mat PolynomialFit(vector<Point2d>& points, int order)
+{
+	cv::Mat U(points.size(), (order + 1), CV_64F);
+	cv::Mat Y(points.size(), 1, CV_64F);
+
+	for (int i = 0; i < U.rows; i++)
+		for (int j = 0; j < U.cols; j++)
+			U.at<double>(i, j) = pow(points[i].y, j);
+
+	for (int i = 0; i < Y.rows; i++)
+		Y.at<double>(i, 0) = points[i].x;
+
+	cv::Mat K((order + 1), 1, CV_64F);
+
+	if (U.data != NULL)
+		K = (U.t() * U).inv() * U.t() * Y;
+
+	return K;
+}
+
 vector<Point> GetCurvePoints(Mat& K, vector<Point>& points, int rows, int order)
 {
 	vector<Point> curvePoints;
@@ -79,11 +99,20 @@ vector<Point> GetCurvePoints(Mat& K, vector<Point>& points, int rows, int order)
 	return curvePoints;
 }
 
+double GetRadiusOfCurvature(Mat K, double y)
+{
+	// ay^2 + by + c
+	double a = K.at<double>(2);
+	double b = K.at<double>(1);
+
+	return pow(1 + pow(2 * a * y + b, 2), 1.5) / abs(2 * a);
+}
+
 void GetVehiclePosition(CurveFitData& data, double metersPerPixel)
 {
 	int midWidth = data.image.cols / 2;
 	
-
+	// Get the points at the bottom of the frame
 	int leftPoint = data.leftCurvePoints[data.leftCurvePoints.size() - 1].x;
 	int rightPoint = data.rightCurvePoints[data.leftCurvePoints.size() - 1].x;
 
@@ -92,7 +121,7 @@ void GetVehiclePosition(CurveFitData& data, double metersPerPixel)
 	data.vehiclePosition = (pixelPosition - midWidth) * metersPerPixel;
 }
 
-void CurveFit(Mat& in, CurveFitData& outCurveData, double metersPerPixel, int numWindows, int windowWidth, int minPixelCount)
+void CurveFit(Mat& in, CurveFitData& outCurveData, double metersPerPixelX, double metersPerPixelY, int numWindows, int windowWidth, int minPixelCount)
 {
 	int windowHeight = in.rows / numWindows;
 	int midImageWidth = in.cols / 2;
@@ -100,8 +129,10 @@ void CurveFit(Mat& in, CurveFitData& outCurveData, double metersPerPixel, int nu
 
 	outCurveData.image = in.clone() * 255;
 
+	// Find a good starting position for the bottom most window
 	Point centers = FindInitialLanePoints(in, Range(in.rows / 2, in.rows));
 
+	// Define first window bounds
 	int currentLeftX = centers.x;
 	int currentRightX = centers.y + midImageWidth;
 
@@ -121,6 +152,8 @@ void CurveFit(Mat& in, CurveFitData& outCurveData, double metersPerPixel, int nu
 	Mat leftLane = Mat::zeros(Size(in.cols, in.rows), CV_8U);
 	Mat rightLane = Mat::zeros(Size(in.cols, in.rows), CV_8U);
 	
+	// For each of the windows, find the average x position and add reposition the window at thaat point
+	// Add the pixels in the window to a separate image, storing one lane line
 	for (int i = 0; i < numWindows; i++)
 	{
 		leftWindowBounds.y = in.rows - (i + 1) * windowHeight;
@@ -144,30 +177,45 @@ void CurveFit(Mat& in, CurveFitData& outCurveData, double metersPerPixel, int nu
 		rectangle(outCurveData.image, leftWindowBounds, Scalar::all(255), 3);
 		rectangle(outCurveData.image, rightWindowBounds, Scalar::all(255), 3);
 
-		vector<Point> leftWindowPixels;
-		vector<Point> rightWindowPixels;
-
 		leftWindow.copyTo(leftLane(leftWindowBounds));
 		rightWindow.copyTo(rightLane(rightWindowBounds));
 	}
 
-	Mat polyFit = Mat::zeros(Size(leftLane.cols, leftLane.rows), CV_8U);
-
+	// Find the lane pixel positions and curve fit them separately
 	findNonZero(leftLane, leftLanePixels);
 	findNonZero(rightLane, rightLanePixels);
 
 	outCurveData.leftPixelK = PolynomialFit(leftLanePixels, 2);
 	outCurveData.rightPixelK = PolynomialFit(rightLanePixels, 2);
 
-	outCurveData.leftCurvePoints = GetCurvePoints(outCurveData.leftPixelK, leftLanePixels, polyFit.rows, 2);
-	outCurveData.rightCurvePoints = GetCurvePoints(outCurveData.rightPixelK, rightLanePixels, polyFit.rows, 2);
-	/*
+	outCurveData.leftCurvePoints = GetCurvePoints(outCurveData.leftPixelK, leftLanePixels, in.rows, 2);
+	outCurveData.rightCurvePoints = GetCurvePoints(outCurveData.rightPixelK, rightLanePixels, in.rows, 2);
+
+	// Get the vehicle offset from the center of the lane
+	GetVehiclePosition(outCurveData, metersPerPixelX);
+
+	// Scale the pixel positions in terms of meters per pixel
+	vector<Point2d> leftLaneRealPoints;
+	vector<Point2d> rightLaneRealPoints;
+
+	for (Point2d point : leftLanePixels)
+		leftLaneRealPoints.emplace_back(point.x * metersPerPixelX, point.y * metersPerPixelY);
+
+	for (Point2d point : rightLanePixels)
+		rightLaneRealPoints.emplace_back(point.x * metersPerPixelX, point.y * metersPerPixelY);
+
+	outCurveData.leftRealK = PolynomialFit(leftLaneRealPoints, 2);
+	outCurveData.rightRealK = PolynomialFit(rightLaneRealPoints, 2);
+
+	outCurveData.leftRadius = GetRadiusOfCurvature(outCurveData.leftRealK, in.cols * metersPerPixelX);
+	outCurveData.rightRadius = GetRadiusOfCurvature(outCurveData.rightRealK, in.cols * metersPerPixelX);
+
+	// Draw the curves
+	outCurveData.curves = Mat::zeros(Size(leftLane.cols, leftLane.rows), CV_8U);
+
 	for (Point point : outCurveData.leftCurvePoints)
-		circle(polyFit, point, 1, cv::Scalar(255, 255, 255), -1, LineTypes::LINE_AA);
+		circle(outCurveData.curves, point, 1, cv::Scalar(255, 255, 255), -1, LineTypes::LINE_AA);
 
 	for (Point point : outCurveData.rightCurvePoints)
-		circle(polyFit, point, 1, cv::Scalar(255, 255, 255), -1, LineTypes::LINE_AA);
-	*/
-
-	GetVehiclePosition(outCurveData, metersPerPixel);
+		circle(outCurveData.curves, point, 1, cv::Scalar(255, 255, 255), -1, LineTypes::LINE_AA);
 }
