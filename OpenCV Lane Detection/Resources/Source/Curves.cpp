@@ -210,12 +210,12 @@ void CurveFit(Mat& in, CurveFitData& outCurveData, double metersPerPixelX, doubl
 	outCurveData.leftRadius = GetRadiusOfCurvature(outCurveData.leftRealK, in.cols * metersPerPixelX);
 	outCurveData.rightRadius = GetRadiusOfCurvature(outCurveData.rightRealK, in.cols * metersPerPixelX);
 
-	// Draw the curves
-	outCurveData.curves = Mat::zeros(Size(leftLane.cols, leftLane.rows), CV_8U);
+	// Draw the curves and convert color from gray to bgr
+	cvtColor(outCurveData.image, outCurveData.image, COLOR_GRAY2BGR);
 
 	for (Point point : outCurveData.leftCurvePoints)
-		circle(outCurveData.curves, point, 1, cv::Scalar(255, 255, 255), -1, LineTypes::LINE_AA);
+		circle(outCurveData.image, point, 3, cv::Scalar(255, 0, 255), -1, LineTypes::LINE_AA);
 
 	for (Point point : outCurveData.rightCurvePoints)
-		circle(outCurveData.curves, point, 1, cv::Scalar(255, 255, 255), -1, LineTypes::LINE_AA);
+		circle(outCurveData.image, point, 3, cv::Scalar(255, 0, 255), -1, LineTypes::LINE_AA);
 }

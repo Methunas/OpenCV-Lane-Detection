@@ -7,7 +7,7 @@ using namespace cv;
 
 struct CurveFitData
 {
-	Mat image, leftPixelK, rightPixelK, leftRealK, rightRealK, curves;
+	Mat image, leftPixelK, rightPixelK, leftRealK, rightRealK;
 	vector<Point> leftCurvePoints, rightCurvePoints;
 	double leftRadius, rightRadius, vehiclePosition;
 };

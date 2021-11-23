@@ -61,7 +61,7 @@ void ProcessFrame(Mat& frame, CalibrationData& calibrationData, UndistortMapData
     double metersPerPixelX = 3.7 / 700;
     double metersPerPixelY = 30.0 / 720;
 
-    CurveFit(binary, curveData, metersPerPixelX, metersPerPixelY, 9, 200, 50);
+    CurveFit(binary, curveData, metersPerPixelX, metersPerPixelY, 9, 200, 10);
 
     if (showStepsInNewWindows)
         imshow("Curve Fitting", curveData.image);
@@ -102,7 +102,6 @@ void ProcessFrame(Mat& frame, CalibrationData& calibrationData, UndistortMapData
         cvtColor(laneFilterData.colorMask, laneFilterData.colorMask, COLOR_GRAY2BGR);
         cvtColor(laneFilterData.sobelMask, laneFilterData.sobelMask, COLOR_GRAY2BGR);
         cvtColor(binary, binary, COLOR_GRAY2BGR);
-        cvtColor(curveData.image, curveData.image, COLOR_GRAY2BGR);
 
         // Copy the frames to the top of the final frame
         skyView.copyTo(frame(Rect(0, 0, viewWidth, viewHeight)));
