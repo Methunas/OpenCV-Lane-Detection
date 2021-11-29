@@ -12,39 +12,39 @@
 using namespace std;
 using namespace filesystem;
 
-struct UndistortMapData
-{
-    Mat map1, map2;
-};
-
-
 struct PartUndistortMapData
 {
     vector<Mat> map1_parts, map2_parts;
 };
 
 // This function is a modified version of cv::undistort which calculates all of the rectify maps and outputs them
-void CalculatePartUndistortMaps(PartUndistortMapData& undistortMapDataOut, const Size imageSize, const CalibrationData& calibrationData, const UndistortMapData& undistortMapData)
+void CalculatePartUndistortMaps(PartUndistortMapData& undistortMapDataOut, const Size imageSize, const CalibrationData& calibrationData)
 {
-    Mat_<double> A, I = Mat_<double>::eye(3, 3);
-    calibrationData.camMatrix.convertTo(A, CV_64F);
+    Mat distCoeffs = calibrationData.distortion, cameraMatrix = calibrationData.camMatrix;
 
     int stripe_size0 = min(max(1, (1 << 12) / max(imageSize.width, 1)), imageSize.height);
-    double v0 = A(1, 2);
     Mat map1(stripe_size0, imageSize.width, CV_16SC2), map2(stripe_size0, imageSize.width, CV_16UC1);
 
+    Mat_<double> A, Ar, I = Mat_<double>::eye(3, 3);
+
+    cameraMatrix.convertTo(A, CV_64F);
+    distCoeffs = Mat_<double>(distCoeffs);
+
+    A.copyTo(Ar);
+
+    double v0 = Ar(1, 2);
     for (int y = 0; y < imageSize.height; y += stripe_size0)
     {
         int stripe_size = min(stripe_size0, imageSize.height - y);
-        A(1, 2) = v0 - y;
+        Ar(1, 2) = v0 - y;
         Mat map1_part = map1.rowRange(0, stripe_size),
             map2_part = map2.rowRange(0, stripe_size);
 
-        initUndistortRectifyMap(A, calibrationData.distortion, I, A, Size(imageSize.width, stripe_size),
+        initUndistortRectifyMap(A, distCoeffs, I, Ar, Size(imageSize.width, stripe_size),
             map1_part.type(), map1_part, map2_part);
 
-        undistortMapDataOut.map1_parts.push_back(map1_part);
-        undistortMapDataOut.map2_parts.push_back(map2_part);
+        undistortMapDataOut.map1_parts.push_back(map1_part.clone());
+        undistortMapDataOut.map2_parts.push_back(map2_part.clone());
     }
 }
 
@@ -92,6 +92,12 @@ void ProcessFrame(Mat& frame, const CalibrationData& calibrationData, const Part
     if (showStepsInNewWindows)
         imshow("Sky View", skyView);
 
+    timer.stop();
+    cout << "Sky View Time: " << timer.getTimeSec() << "s" << endl;
+
+    timer.reset();
+    timer.start();
+
     // Filter out the lane using a color mask and sobel mask on the saturation and lightness of the image
     LaneFilterArgs laneFilterArgs(220, 40, 205, Point2f(0.7f, 1.4f), 40, 20);
 
@@ -113,6 +119,12 @@ void ProcessFrame(Mat& frame, const CalibrationData& calibrationData, const Part
         imshow("Lane Filter", binary * 255);
     }
 
+    timer.stop();
+    cout << "Lane Filter Time: " << timer.getTimeSec() << "s" << endl;
+
+    timer.reset();
+    timer.start();
+
     // Fit a curve to the lane points from the lane filtering
     CurveFitData curveData;
     double metersPerPixelX = 3.7 / 700;
@@ -123,6 +135,12 @@ void ProcessFrame(Mat& frame, const CalibrationData& calibrationData, const Part
     if (showStepsInNewWindows)
         imshow("Curve Fitting", curveData.image);
 
+    timer.stop();
+    cout << "Curve Fit Time: " << timer.getTimeSec() << "s" << endl;
+
+    timer.reset();
+    timer.start();
+
     // Fill in the lane pixels and undo the sky view perspective warp
     Mat projected;
     ProjectLane(frame, projected, destinationPoints, sourcePoints, curveData);
@@ -131,6 +149,12 @@ void ProcessFrame(Mat& frame, const CalibrationData& calibrationData, const Part
         imshow("Lane Projection", projected);
 
     frame = projected;
+
+    timer.stop();
+    cout << "Project Time: " << timer.getTimeSec() << "s" << endl;
+
+    timer.reset();
+    timer.start();
 
     // Add the results to the frame
     string posText = "Vehicle Position: " +
@@ -186,9 +210,9 @@ void ProcessFrame(Mat& frame, const CalibrationData& calibrationData, const Part
         putText(frame, leftRadiusText, Point(frame.cols - 400, 20), FONT_HERSHEY_DUPLEX, 0.75, Scalar(0, 0, 0), 2, FILLED);
         putText(frame, rightRadiusText, Point(frame.cols - 400, 40), FONT_HERSHEY_DUPLEX, 0.75, Scalar(0, 0, 0), 2, FILLED);
     }
-    
+
     timer.stop();
-    cout << "Processing Time: " << timer.getTimeSec() << "s" << endl << endl;
+    cout << "Combine Time: " << timer.getTimeSec() << "s" << endl << endl;
 }
 
 int main(int argc, char* argv[])
@@ -239,14 +263,9 @@ int main(int argc, char* argv[])
     int frameDelay = (int)(1000 / fps);
     Size videoSize((int)video.get(cv::CAP_PROP_FRAME_WIDTH), (int)video.get(cv::CAP_PROP_FRAME_HEIGHT));
 
-    // Generate the undistory maps for use with the remap() function in ProcessFrame()
-    UndistortMapData undistortMapData;
-    initUndistortRectifyMap(calibrationData.camMatrix, calibrationData.distortion, Mat(),
-        getOptimalNewCameraMatrix(calibrationData.camMatrix, calibrationData.distortion, videoSize, 1, videoSize, 0), 
-        videoSize, CV_16SC2, undistortMapData.map1, undistortMapData.map2);
-
+    // Generate the undistort maps for use with the RemapFrame() function in ProcessFrame()
     PartUndistortMapData partUndistortMapData;
-    CalculatePartUndistortMaps(partUndistortMapData, videoSize, calibrationData, undistortMapData);
+    CalculatePartUndistortMaps(partUndistortMapData, videoSize, calibrationData);
 
     for (;;)
     {
