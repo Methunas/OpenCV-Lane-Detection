@@ -14,7 +14,7 @@ struct CalibrationData
 {
 	Mat camMatrix, distortion;
 
-	void OutputToFile(string path)
+	void OutputToFile(const string path)
 	{
 		if (!exists(path))
 			create_directory(path);
@@ -28,7 +28,7 @@ struct CalibrationData
 		outStream.release();
 	}
 
-	bool LoadFromFile(string path)
+	bool LoadFromFile(const string path)
 	{
 		FileStorage inStream(path + "\\calibration.yml", FileStorage::READ);
 
@@ -43,4 +43,4 @@ struct CalibrationData
 	}
 };
 
-CalibrationData Calibrate(std::vector<cv::Mat> images, cv::Size boardSize, float squareSize);
+CalibrationData Calibrate(const std::vector<cv::Mat>& images, cv::Size boardSize, float squareSize);

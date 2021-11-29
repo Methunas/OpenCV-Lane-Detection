@@ -20,4 +20,4 @@ struct LaneFilterData
 	Mat colorMask, sobelMask, combinedMask;
 };
 
-void LaneFilter(Mat& in, LaneFilterData& out, LaneFilterArgs args);
+void LaneFilter(const Mat& in, LaneFilterData& out, LaneFilterArgs args);

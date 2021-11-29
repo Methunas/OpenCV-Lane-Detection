@@ -1,6 +1,6 @@
 #include "Calibration.h"
 
-CalibrationData Calibrate(vector<Mat> images, Size boardSize, float squareSize)
+CalibrationData Calibrate(const vector<Mat>& images, Size boardSize, float squareSize)
 {
 	if (images.empty())
 		return CalibrationData();

@@ -148,16 +148,20 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Resources\Source\Curves.cpp" />
+    <ClCompile Include="Resources\Source\FrameProcessing.cpp" />
     <ClCompile Include="Resources\Source\LaneFilter.cpp" />
     <ClCompile Include="Resources\Source\SkyView.cpp" />
     <ClCompile Include="Resources\Source\Calibration.cpp" />
     <ClCompile Include="Resources\Source\Main.cpp" />
+    <ClCompile Include="Resources\Source\Undistortion.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources\Source\Curves.h" />
+    <ClInclude Include="Resources\Source\FrameProcessing.h" />
     <ClInclude Include="Resources\Source\LaneFilter.h" />
     <ClInclude Include="Resources\Source\SkyView.h" />
     <ClInclude Include="Resources\Source\Calibration.h" />
+    <ClInclude Include="Resources\Source\Undistortion.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

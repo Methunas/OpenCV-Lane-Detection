@@ -9,14 +9,14 @@
 using namespace std;
 using namespace cv;
 
-void SkyView(Mat& in, Mat& out, vector<Point2f> sourcePoints, vector<Point2f> destinationPoints)
+void SkyView(const Mat& in, Mat& out, vector<Point2f> sourcePoints, vector<Point2f> destinationPoints)
 {
 	// Warp the image into sky view using the specified points
 	Mat warpMatrix = getPerspectiveTransform(sourcePoints, destinationPoints);
 	warpPerspective(in, out, warpMatrix, in.size(), INTER_LINEAR);
 }
 
-void ProjectLane(Mat& originalIn, Mat& out, vector<Point2f> sourcePoints, vector<Point2f> destinationPoints, CurveFitData curveData, Scalar color)
+void ProjectLane(const Mat& originalIn, Mat& out, vector<Point2f> sourcePoints, vector<Point2f> destinationPoints, CurveFitData curveData, Scalar color)
 {
 	Mat lane = Mat::zeros(originalIn.size(), CV_8UC3);
 

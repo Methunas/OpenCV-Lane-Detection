@@ -7,7 +7,7 @@
 using namespace std;
 using namespace cv;
 
-void ColorMask(Mat& in, Mat& out, LaneFilterArgs args)
+void ColorMask(const Mat& in, Mat& out, LaneFilterArgs args)
 {
 	Mat splitChannels[3];
 	
@@ -32,7 +32,7 @@ void ColorMask(Mat& in, Mat& out, LaneFilterArgs args)
 	out = threshold1 | threshold2;
 }
 
-void SobelMask(Mat& in, Mat& out, LaneFilterArgs args)
+void SobelMask(const Mat& in, Mat& out, LaneFilterArgs args)
 {
 	Mat splitChannels[3];
 	split(in, splitChannels);
@@ -89,7 +89,7 @@ void SobelMask(Mat& in, Mat& out, LaneFilterArgs args)
 	out = threshold1 & threshold2 & threshold3 & ~threshold4;
 }
 
-void LaneFilter(Mat& in, LaneFilterData& out, LaneFilterArgs args)
+void LaneFilter(const Mat& in, LaneFilterData& out, LaneFilterArgs args)
 {
 	// Convert the image to HLS color space and apply masks to filter out the lane lines
 	Mat hlsImage;

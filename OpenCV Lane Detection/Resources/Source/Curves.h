@@ -12,4 +12,4 @@ struct CurveFitData
 	double leftRadius, rightRadius, vehiclePosition;
 };
 
-void CurveFit(Mat& in, CurveFitData& outCurveData, double metersPerPixelX, double metersPerPixelY, int numWindows, int windowWidth, int minPixelCount);
+void CurveFit(const Mat& in, CurveFitData& outCurveData, double metersPerPixelX, double metersPerPixelY, int numWindows, int windowWidth, int minPixelCount);

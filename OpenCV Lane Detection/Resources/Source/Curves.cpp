@@ -4,7 +4,7 @@
 #include <opencv2/highgui.hpp>
 #include <iostream>
 
-Point FindInitialLanePoints(Mat& in, Range heightRange)
+Point FindInitialLanePoints(const Mat& in, const Range heightRange)
 {
 	Mat lowerWindow = in(heightRange, Range::all());
 
@@ -22,7 +22,7 @@ Point FindInitialLanePoints(Mat& in, Range heightRange)
 	return Point(lMaxP.x, rMaxP.x);
 }
 
-int FindWindowLanePoint(Mat& window, Rect bounds, int minPixelCount)
+int FindWindowLanePoint(const Mat& window, Rect bounds, int minPixelCount)
 {
 	int pixelCount = countNonZero(window);
 
@@ -42,7 +42,7 @@ int FindWindowLanePoint(Mat& window, Rect bounds, int minPixelCount)
 	return (int)average;
 }
 
-Mat PolynomialFit(vector<Point>& points, int order)
+Mat PolynomialFit(const vector<Point>& points, int order)
 {
 	cv::Mat U(points.size(), (order + 1), CV_64F);
 	cv::Mat Y(points.size(), 1, CV_64F);
@@ -62,7 +62,7 @@ Mat PolynomialFit(vector<Point>& points, int order)
 	return K;
 }
 
-Mat PolynomialFit(vector<Point2d>& points, int order)
+Mat PolynomialFit(const vector<Point2d>& points, int order)
 {
 	cv::Mat U(points.size(), (order + 1), CV_64F);
 	cv::Mat Y(points.size(), 1, CV_64F);
@@ -82,7 +82,7 @@ Mat PolynomialFit(vector<Point2d>& points, int order)
 	return K;
 }
 
-vector<Point> GetCurvePoints(Mat& K, vector<Point>& points, int rows, int order)
+vector<Point> GetCurvePoints(const Mat& K, const vector<Point>& points, int rows, int order)
 {
 	vector<Point> curvePoints;
 	
@@ -121,7 +121,7 @@ void GetVehiclePosition(CurveFitData& data, double metersPerPixel)
 	data.vehiclePosition = (pixelPosition - midWidth) * metersPerPixel;
 }
 
-void CurveFit(Mat& in, CurveFitData& outCurveData, double metersPerPixelX, double metersPerPixelY, int numWindows, int windowWidth, int minPixelCount)
+void CurveFit(const Mat& in, CurveFitData& outCurveData, double metersPerPixelX, double metersPerPixelY, int numWindows, int windowWidth, int minPixelCount)
 {
 	int windowHeight = in.rows / numWindows;
 	int midImageWidth = in.cols / 2;
