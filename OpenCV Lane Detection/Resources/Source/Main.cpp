@@ -6,6 +6,7 @@
 #include <iostream>
 #include <filesystem>
 #include <opencv2/core/utils/logger.hpp>
+#include <opencv2/core/utility.hpp>
 #include <opencv2/videoio.hpp>
 
 using namespace std;
@@ -16,13 +17,69 @@ struct UndistortMapData
     Mat map1, map2;
 };
 
-void ProcessFrame(Mat& frame, CalibrationData& calibrationData, UndistortMapData& undistortMapData, bool showStepsInNewWindows, bool combineStepsInFinalFrame)
-{
-    // Undistort the frame using the calibration data
-    undistort(frame.clone(), frame, calibrationData.camMatrix, calibrationData.distortion);
 
+struct PartUndistortMapData
+{
+    vector<Mat> map1_parts, map2_parts;
+};
+
+// This function is a modified version of cv::undistort which calculates all of the rectify maps and outputs them
+void CalculatePartUndistortMaps(PartUndistortMapData& undistortMapDataOut, const Size imageSize, const CalibrationData& calibrationData, const UndistortMapData& undistortMapData)
+{
+    Mat_<double> A, I = Mat_<double>::eye(3, 3);
+    calibrationData.camMatrix.convertTo(A, CV_64F);
+
+    int stripe_size0 = min(max(1, (1 << 12) / max(imageSize.width, 1)), imageSize.height);
+    double v0 = A(1, 2);
+    Mat map1(stripe_size0, imageSize.width, CV_16SC2), map2(stripe_size0, imageSize.width, CV_16UC1);
+
+    for (int y = 0; y < imageSize.height; y += stripe_size0)
+    {
+        int stripe_size = min(stripe_size0, imageSize.height - y);
+        A(1, 2) = v0 - y;
+        Mat map1_part = map1.rowRange(0, stripe_size),
+            map2_part = map2.rowRange(0, stripe_size);
+
+        initUndistortRectifyMap(A, calibrationData.distortion, I, A, Size(imageSize.width, stripe_size),
+            map1_part.type(), map1_part, map2_part);
+
+        undistortMapDataOut.map1_parts.push_back(map1_part);
+        undistortMapDataOut.map2_parts.push_back(map2_part);
+    }
+}
+
+// This function is a modified version of cv::undistort which remaps the frame without recalculating the recify maps
+void RemapFrame(const Mat& frame, Mat& out, const CalibrationData& calibrationData, const PartUndistortMapData& undistortMapData)
+{
+    out.create(frame.size(), frame.type());
+    int stripe_size0 = std::min(max(1, (1 << 12) / max(frame.cols, 1)), frame.rows);
+    
+    for (int y = 0, i = 0; y < frame.rows; y += stripe_size0, i++)
+    {
+        int stripe_size = min(stripe_size0, frame.rows - y);
+        Mat dst_part = out.rowRange(y, y + stripe_size);
+        remap(frame, dst_part, undistortMapData.map1_parts.at(i), undistortMapData.map2_parts.at(i), INTER_LINEAR, BORDER_CONSTANT);
+    }
+}
+
+void ProcessFrame(Mat& frame, const CalibrationData& calibrationData, const PartUndistortMapData& undistortMapData, bool showStepsInNewWindows, bool combineStepsInFinalFrame)
+{
+    TickMeter timer;
+    timer.start();
+
+    // Undistort the frame using the calibration data
+    //undistort(frame.clone(), frame, calibrationData.camMatrix, calibrationData.distortion);
+    Mat undistorted;
+    RemapFrame(frame, undistorted, calibrationData, undistortMapData);
+    frame = undistorted;
     // Below function is meant to be used as a faster replacement to undistort, but it doesn't have the same output
     //remap(frame.clone(), frame, undistortMapData.map1, undistortMapData.map2, INTER_LINEAR, BORDER_CONSTANT);
+    
+    timer.stop();
+    cout << "Undistort Time: " << timer.getTimeSec() << "s" << endl;
+
+    timer.reset();
+    timer.start();
 
     // Define the points which will be used to warp the perspective
     // Points from the car towards the horizon, aligned with a centered lane
@@ -129,6 +186,9 @@ void ProcessFrame(Mat& frame, CalibrationData& calibrationData, UndistortMapData
         putText(frame, leftRadiusText, Point(frame.cols - 400, 20), FONT_HERSHEY_DUPLEX, 0.75, Scalar(0, 0, 0), 2, FILLED);
         putText(frame, rightRadiusText, Point(frame.cols - 400, 40), FONT_HERSHEY_DUPLEX, 0.75, Scalar(0, 0, 0), 2, FILLED);
     }
+    
+    timer.stop();
+    cout << "Processing Time: " << timer.getTimeSec() << "s" << endl << endl;
 }
 
 int main(int argc, char* argv[])
@@ -185,6 +245,9 @@ int main(int argc, char* argv[])
         getOptimalNewCameraMatrix(calibrationData.camMatrix, calibrationData.distortion, videoSize, 1, videoSize, 0), 
         videoSize, CV_16SC2, undistortMapData.map1, undistortMapData.map2);
 
+    PartUndistortMapData partUndistortMapData;
+    CalculatePartUndistortMaps(partUndistortMapData, videoSize, calibrationData, undistortMapData);
+
     for (;;)
     {
         Mat frame;
@@ -197,7 +260,7 @@ int main(int argc, char* argv[])
             continue;
         }
         
-        ProcessFrame(frame, calibrationData, undistortMapData, showStepsInNewWindows, combineStepsInFinalFrame);
+        ProcessFrame(frame, calibrationData, partUndistortMapData, showStepsInNewWindows, combineStepsInFinalFrame);
 
         imshow("Lane Detection", frame);
         waitKey(frameDelay);
