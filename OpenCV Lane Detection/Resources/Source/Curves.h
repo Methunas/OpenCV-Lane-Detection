@@ -9,7 +9,7 @@ struct CurveFitData
 {
 	Mat image, leftPixelK, rightPixelK, leftRealK, rightRealK;
 	vector<Point> leftCurvePoints, rightCurvePoints;
-	double leftRadius, rightRadius, vehiclePosition;
+	float leftRadius, rightRadius, vehiclePosition;
 };
 
-void CurveFit(const Mat& in, CurveFitData& outCurveData, double metersPerPixelX, double metersPerPixelY, int numWindows, int windowWidth, int minPixelCount);
+void CurveFit(const Mat& in, CurveFitData& outCurveData, float metersPerPixelX, float metersPerPixelY, int numWindows, int windowWidth, int minPixelCount);

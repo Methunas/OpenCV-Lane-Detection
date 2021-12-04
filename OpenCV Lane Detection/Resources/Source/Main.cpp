@@ -60,9 +60,15 @@ int main(int argc, char* argv[])
     PartUndistortMapData partUndistortMapData;
     CalculatePartUndistortMaps(partUndistortMapData, videoSize, calibrationData);
 
+    TickMeter timer;
+
     for (;;)
     {
         Mat frame;
+
+        timer.reset();
+        timer.start();
+
         video >> frame;
 
         // Reset the frame position if all frames have been displayed
@@ -75,7 +81,11 @@ int main(int argc, char* argv[])
         ProcessFrame(frame, calibrationData, partUndistortMapData, showStepsInNewWindows, combineStepsInFinalFrame);
 
         imshow("Lane Detection", frame);
-        waitKey(frameDelay);
+
+        timer.stop();
+
+        if (int totalDelay = frameDelay - timer.getAvgTimeSec() > 0)
+            waitKey(totalDelay);
     }
 
     waitKey(0);

@@ -10,14 +10,14 @@ void CalculatePartUndistortMaps(PartUndistortMapData& undistortMapDataOut, const
     int stripe_size0 = min(max(1, (1 << 12) / max(imageSize.width, 1)), imageSize.height);
     Mat map1(stripe_size0, imageSize.width, CV_16SC2), map2(stripe_size0, imageSize.width, CV_16UC1);
 
-    Mat_<double> A, Ar, I = Mat_<double>::eye(3, 3);
+    Mat_<float> A, Ar, I = Mat_<float>::eye(3, 3);
 
-    cameraMatrix.convertTo(A, CV_64F);
-    distCoeffs = Mat_<double>(distCoeffs);
+    cameraMatrix.convertTo(A, CV_32F);
+    distCoeffs = Mat_<float>(distCoeffs);
 
     A.copyTo(Ar);
 
-    double v0 = Ar(1, 2);
+    float v0 = Ar(1, 2);
     for (int y = 0; y < imageSize.height; y += stripe_size0)
     {
         int stripe_size = min(stripe_size0, imageSize.height - y);

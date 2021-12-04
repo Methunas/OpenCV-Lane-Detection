@@ -44,17 +44,24 @@ int FindWindowLanePoint(const Mat& window, Rect bounds, int minPixelCount)
 
 Mat PolynomialFit(const vector<Point>& points, int order)
 {
-	cv::Mat U(points.size(), (order + 1), CV_64F);
-	cv::Mat Y(points.size(), 1, CV_64F);
+	cv::Mat U(points.size(), (order + 1), CV_32F);
+	cv::Mat Y(points.size(), 1, CV_32F);
 
 	for (int i = 0; i < U.rows; i++)
+	{
+		float* rowPtr = U.ptr<float>(i);
+
 		for (int j = 0; j < U.cols; j++)
-			U.at<double>(i, j) = pow(points[i].y, j);
+			rowPtr[j] = pow(points[i].y, j);
+	}
 
 	for (int i = 0; i < Y.rows; i++)
-		Y.at<double>(i, 0) = points[i].x;
+	{
+		float* rowPtr = Y.ptr<float>(i);
+		rowPtr[0] = points[i].x;
+	}
 
-	cv::Mat K((order + 1), 1, CV_64F);
+	cv::Mat K((order + 1), 1, CV_32F);
 
 	if (U.data != NULL)
 		K = (U.t() * U).inv() * U.t() * Y;
@@ -64,17 +71,24 @@ Mat PolynomialFit(const vector<Point>& points, int order)
 
 Mat PolynomialFit(const vector<Point2d>& points, int order)
 {
-	cv::Mat U(points.size(), (order + 1), CV_64F);
-	cv::Mat Y(points.size(), 1, CV_64F);
+	cv::Mat U(points.size(), (order + 1), CV_32F);
+	cv::Mat Y(points.size(), 1, CV_32F);
 
 	for (int i = 0; i < U.rows; i++)
+	{
+		float* rowPtr = U.ptr<float>(i);
+
 		for (int j = 0; j < U.cols; j++)
-			U.at<double>(i, j) = pow(points[i].y, j);
+			rowPtr[j] = pow(points[i].y, j);
+	}
 
 	for (int i = 0; i < Y.rows; i++)
-		Y.at<double>(i, 0) = points[i].x;
+	{
+		float* rowPtr = Y.ptr<float>(i);
+		rowPtr[0] = points[i].x;
+	}
 
-	cv::Mat K((order + 1), 1, CV_64F);
+	cv::Mat K((order + 1), 1, CV_32F);
 
 	if (U.data != NULL)
 		K = (U.t() * U).inv() * U.t() * Y;
@@ -91,7 +105,10 @@ vector<Point> GetCurvePoints(const Mat& K, const vector<Point>& points, int rows
 		Point2d point(0, j);
 
 		for (int k = 0; k < order + 1; k++)
-			point.x += K.at<double>(k, 0) * pow(j, k);
+		{
+			const float* rowPtr = K.ptr<float>(k);
+			point.x += rowPtr[0] * pow(j, k);
+		}
 
 		curvePoints.push_back(point);
 	}
@@ -99,16 +116,16 @@ vector<Point> GetCurvePoints(const Mat& K, const vector<Point>& points, int rows
 	return curvePoints;
 }
 
-double GetRadiusOfCurvature(Mat K, double y)
+double GetRadiusOfCurvature(Mat K, float y)
 {
 	// ay^2 + by + c
-	double a = K.at<double>(2);
-	double b = K.at<double>(1);
+	float a = K.at<float>(2);
+	float b = K.at<float>(1);
 
 	return pow(1 + pow(2 * a * y + b, 2), 1.5) / abs(2 * a);
 }
 
-void GetVehiclePosition(CurveFitData& data, double metersPerPixel)
+void GetVehiclePosition(CurveFitData& data, float metersPerPixel)
 {
 	int midWidth = data.image.cols / 2;
 	
@@ -116,12 +133,12 @@ void GetVehiclePosition(CurveFitData& data, double metersPerPixel)
 	int leftPoint = data.leftCurvePoints[data.leftCurvePoints.size() - 1].x;
 	int rightPoint = data.rightCurvePoints[data.leftCurvePoints.size() - 1].x;
 
-	double pixelPosition = leftPoint + (rightPoint - leftPoint) / 2.0;
+	float pixelPosition = leftPoint + (rightPoint - leftPoint) / 2.0;
 	
 	data.vehiclePosition = (pixelPosition - midWidth) * metersPerPixel;
 }
 
-void CurveFit(const Mat& in, CurveFitData& outCurveData, double metersPerPixelX, double metersPerPixelY, int numWindows, int windowWidth, int minPixelCount)
+void CurveFit(const Mat& in, CurveFitData& outCurveData, float metersPerPixelX, float metersPerPixelY, int numWindows, int windowWidth, int minPixelCount)
 {
 	int windowHeight = in.rows / numWindows;
 	int midImageWidth = in.cols / 2;

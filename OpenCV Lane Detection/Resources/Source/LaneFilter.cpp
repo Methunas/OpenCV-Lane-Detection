@@ -37,42 +37,66 @@ void SobelMask(const Mat& in, Mat& out, LaneFilterArgs args)
 	Mat splitChannels[3];
 	split(in, splitChannels);
 
-	Mat sobelX;
-	Mat sobelY;
-
+	Mat sobelX, sobelY;
+	
 	// Apply a sobel filter to find the gradient of the image (edge detection)
-	Sobel(splitChannels[1], sobelX, CV_64F, 1, 0, 5);
-	Sobel(splitChannels[1], sobelY, CV_64F, 0, 1, 5);
+	Sobel(splitChannels[1], sobelX, CV_32F, 1, 0, 5);
+	Sobel(splitChannels[1], sobelY, CV_32F, 0, 1, 5);
 
 	sobelX = abs(sobelX);
 	sobelY = abs(sobelY);
 
 	// Find the direction of each pixel
-	Mat direction = Mat::zeros(Size(in.cols, in.rows), CV_64F);
+	Mat direction = Mat::zeros(Size(in.cols, in.rows), CV_32F);
 
-	for (int i = 0; i < in.rows; i++)
-		for (int j = 0; j < in.cols; j++)
-			direction.at<double>(i, j) = atan2(abs(sobelY.at<double>(i, j)), abs(sobelX.at<double>(i, j)));
+	for (int i = 0; i < direction.rows; i++)
+	{
+		float* dirRowPtr = direction.ptr<float>(i);
+		float* sobelXRowPtr = sobelX.ptr<float>(i);
+		float* sobelYRowPtr = sobelY.ptr<float>(i);
 
+		for (int j = 0; j < direction.cols; j++)
+			dirRowPtr[j] = atan2(abs(sobelXRowPtr[j]), abs(sobelYRowPtr[j]));
+	}
+	
 	direction.convertTo(direction, CV_8U);
 	
 	// Find the magnitude of each pixel
-	Mat magnitude;
-	Mat squaredSobelX;
-	Mat squaredSobelY;
+	Mat magnitude, squaredSobelX, squaredSobelY;
 
 	cv::pow(sobelX, 2, squaredSobelX);
 	cv::pow(sobelY, 2, squaredSobelY);
 
 	sqrt(squaredSobelX + squaredSobelY, magnitude);
 
-	double min, max;
-	minMaxLoc(magnitude, &min, &max);
-	convertScaleAbs(magnitude, magnitude, 255 / max);
+	float max = 0;
+	for (int i = 0; i < magnitude.rows; i++)
+	{
+		const float* rowPtr = magnitude.ptr<float>(i);
 
+		for (int j = 0; j < magnitude.cols; j++)
+		{
+			float val = rowPtr[j];
+			max = std::max(max, val);
+		}
+	}
+		
+
+	convertScaleAbs(magnitude, magnitude, 255 / max);
 	Mat scaledSobelX;
 
-	minMaxLoc(sobelX, &min, &max);
+	max = 0;
+	for (int i = 0; i < sobelX.rows; i++)
+	{
+		const float* rowPtr = sobelX.ptr<float>(i);
+
+		for (int j = 0; j < sobelX.cols; j++)
+		{
+			float val = rowPtr[j];
+			max = std::max(max, val);
+		}
+	}
+	
 	convertScaleAbs(sobelX, scaledSobelX, 255 / max);
 
 	// Threshold each mask and only include pixels present in every image
@@ -85,7 +109,7 @@ void SobelMask(const Mat& in, Mat& out, LaneFilterArgs args)
 	threshold(scaledSobelX, threshold2, args.xThreshold, 255, THRESH_BINARY);
 	threshold(direction, threshold3, args.directionThreshold.x, 255, THRESH_BINARY);
 	threshold(direction, threshold4, args.directionThreshold.y, 255, THRESH_BINARY);
-
+	
 	out = threshold1 & threshold2 & threshold3 & ~threshold4;
 }
 
