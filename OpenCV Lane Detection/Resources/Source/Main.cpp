@@ -17,6 +17,7 @@ int main(int argc, char* argv[])
     string videoPath;
     bool showStepsInNewWindows = false;
     bool combineStepsInFinalFrame = false;
+    bool showTimeEveryFrame = false;
 
     for (int i = 0; i < argc; i++)
     {
@@ -30,6 +31,8 @@ int main(int argc, char* argv[])
             showStepsInNewWindows = true;
         if (arg == "-m")
             combineStepsInFinalFrame = true;
+        if (arg == "-t")
+            showTimeEveryFrame = true;
     }
 
     // Calibrate the camera with all of the images in the SaveData folder
@@ -61,6 +64,8 @@ int main(int argc, char* argv[])
     CalculatePartUndistortMaps(partUndistortMapData, videoSize, calibrationData);
 
     TickMeter timer;
+    FrameData frameData;
+    bool frameDataFinished = false;
 
     for (;;)
     {
@@ -75,19 +80,28 @@ int main(int argc, char* argv[])
         if (frame.empty())
         {
             video.set(VideoCaptureProperties::CAP_PROP_POS_FRAMES, 0);
+            
+            if (frameDataFinished == false)
+            {
+                frameData.OutputToFile("Resources\\SaveData");
+                frameDataFinished == true;
+            }
+            
+            timer.stop();
             continue;
         }
         
-        ProcessFrame(frame, calibrationData, partUndistortMapData, showStepsInNewWindows, combineStepsInFinalFrame);
+        ProcessFrame(frame, calibrationData, partUndistortMapData, frameData, showStepsInNewWindows, combineStepsInFinalFrame);
 
         imshow("Lane Detection", frame);
+        frameData.OutputMostRecentToConsole();
 
         timer.stop();
 
         if (int totalDelay = frameDelay - timer.getAvgTimeSec() > 0)
-            waitKey(totalDelay);
+            cv::waitKey(totalDelay);
     }
 
-    waitKey(0);
+    cv::waitKey(0);
     return 0;
 }

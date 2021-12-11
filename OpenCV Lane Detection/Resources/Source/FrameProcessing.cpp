@@ -1,6 +1,6 @@
 #include "FrameProcessing.h"
 
-void ProcessFrame(Mat& frame, const CalibrationData& calibrationData, const PartUndistortMapData& undistortMapData, bool showStepsInNewWindows, bool combineStepsInFinalFrame)
+void ProcessFrame(Mat& frame, const CalibrationData& calibrationData, const PartUndistortMapData& undistortMapData, FrameData& frameData, bool showStepsInNewWindows, bool combineStepsInFinalFrame)
 {
     TickMeter timer;
     timer.start();
@@ -14,7 +14,7 @@ void ProcessFrame(Mat& frame, const CalibrationData& calibrationData, const Part
     //remap(frame.clone(), frame, undistortMapData.map1, undistortMapData.map2, INTER_LINEAR, BORDER_CONSTANT);
 
     timer.stop();
-    cout << "Undistort Time: " << timer.getTimeSec() << "s" << endl;
+    frameData.undistortTime.push_back(timer.getTimeSec());
 
     timer.reset();
     timer.start();
@@ -31,7 +31,7 @@ void ProcessFrame(Mat& frame, const CalibrationData& calibrationData, const Part
         imshow("Sky View", skyView);
 
     timer.stop();
-    cout << "Sky View Time: " << timer.getTimeSec() << "s" << endl;
+    frameData.skyViewTime.push_back(timer.getTimeSec());
 
     timer.reset();
     timer.start();
@@ -58,7 +58,7 @@ void ProcessFrame(Mat& frame, const CalibrationData& calibrationData, const Part
     }
 
     timer.stop();
-    cout << "Lane Filter Time: " << timer.getTimeSec() << "s" << endl;
+    frameData.laneFilterTime.push_back(timer.getTimeSec());
 
     timer.reset();
     timer.start();
@@ -74,7 +74,11 @@ void ProcessFrame(Mat& frame, const CalibrationData& calibrationData, const Part
         imshow("Curve Fitting", curveData.image);
 
     timer.stop();
-    cout << "Curve Fit Time: " << timer.getTimeSec() << "s" << endl;
+
+    frameData.leftRadius.push_back(curveData.leftRadius);
+    frameData.rightRadius.push_back(curveData.rightRadius);
+    frameData.vehiclePosition.push_back(curveData.vehiclePosition);
+    frameData.curveFitTime.push_back(timer.getTimeSec());
 
     timer.reset();
     timer.start();
@@ -89,7 +93,7 @@ void ProcessFrame(Mat& frame, const CalibrationData& calibrationData, const Part
     frame = projected;
 
     timer.stop();
-    cout << "Project Time: " << timer.getTimeSec() << "s" << endl;
+    frameData.projectionTime.push_back(timer.getTimeSec());
 
     timer.reset();
     timer.start();
@@ -150,5 +154,5 @@ void ProcessFrame(Mat& frame, const CalibrationData& calibrationData, const Part
     }
 
     timer.stop();
-    cout << "Combine Time: " << timer.getTimeSec() << "s" << endl << endl;
+    frameData.combineTime.push_back(timer.getTimeSec());
 }

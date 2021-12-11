@@ -14,12 +14,32 @@ Point FindInitialLanePoints(const Mat& in, const Range heightRange)
 	Mat lowerLeft = hist(Range::all(), Range(0, in.cols / 2));
 	Mat lowerRight = hist(Range::all(), Range(in.cols / 2, hist.cols));
 
-	double lMin, lMax, rMin, rMax;
-	Point lMinP, lMaxP, rMinP, rMaxP;
-	minMaxLoc(lowerLeft, &lMin, &lMax, &lMinP, &lMaxP);
-	minMaxLoc(lowerRight, &rMin, &rMax, &rMinP, &rMaxP);
+	float lMax = 0, rMax = 0;
+	int lMaxIndex, rMaxIndex;
 
-	return Point(lMaxP.x, rMaxP.x);
+	for (int i = 0; i < lowerLeft.cols; i++)
+	{
+		float val = lowerLeft.at<float>(i);
+
+		if (lMax < val)
+		{
+			lMax = val;
+			lMaxIndex = i;
+		}
+	}
+
+	for (int i = 0; i < lowerRight.cols; i++)
+	{
+		float val = lowerRight.at<float>(i);
+
+		if (rMax < val)
+		{
+			rMax = val;
+			rMaxIndex = i;
+		}
+	}
+
+	return Point(lMaxIndex, rMaxIndex);
 }
 
 int FindWindowLanePoint(const Mat& window, Rect bounds, int minPixelCount)
@@ -42,6 +62,8 @@ int FindWindowLanePoint(const Mat& window, Rect bounds, int minPixelCount)
 	return (int)average;
 }
 
+// Polynomial fit function adapted from:
+// https://windowsquestions.com/2021/07/07/polynomial-curve-fitting-in-opencv-c/
 Mat PolynomialFit(const vector<Point>& points, int order)
 {
 	cv::Mat U(points.size(), (order + 1), CV_32F);
